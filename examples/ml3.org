@@ -1,0 +1,36 @@
+#+BEGIN_SRC python :session py3 :results output silent
+
+# Import libraries
+import numpy as np
+from umap import UMAP
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib
+matplotlib.rcParams['figure.dpi'] = 80
+
+#+END_SRC
+
+
+#+BEGIN_SRC python :session py3
+# Generate a 4D dataset
+np.random.seed(42)
+data = np.random.rand(800, 4)
+# UMAP Transformation
+reducer = UMAP()
+x = reducer.fit_transform(data)
+#+END_SRC
+
+#+RESULTS:
+
+
+#+BEGIN_SRC python :session py3 :results file
+file_name=os.getcwd()+'/img/t1.png'
+plt.scatter(x[:,0], x[:,1], c=data)
+plt.title('UMAP embedding of random colours');
+plt.savefig(file_name)
+file_name
+#+END_SRC
+
+#+RESULTS:
+[[file:/mnt/work/Programs/ML4qf/examples/img/t1.png]]
+

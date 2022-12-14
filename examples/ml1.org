@@ -1,0 +1,22 @@
+#+BEGIN_SRC python :session py1 :results output silent
+
+  # Import libraries
+  import numpy as np
+  from umap import UMAP
+  import matplotlib.pyplot as plt
+  from mpl_toolkits.mplot3d import Axes3D
+  import matplotlib
+#+END_SRC
+
+
+#+BEGIN_SRC python :session py1
+  # Generate a 4D dataset
+  np.random.seed(42)
+  data = np.random.rand(800, 4)
+  data.shape
+#+END_SRC
+
+#+RESULTS:
+| 800 | 4 |
+
+

@@ -1,0 +1,49 @@
+#+BEGIN_SRC python :session py2 :results output silent
+
+  # Import libraries
+  import numpy as np
+  from umap import UMAP
+  import matplotlib.pyplot as plt
+  from mpl_toolkits.mplot3d import Axes3D
+  import matplotlib
+  from sklearn.datasets import make_classification
+  from sklearn.model_selection import train_test_split, GridSearchCV
+  from sklearn.pipeline import Pipeline
+  from sklearn.svm import LinearSVC
+#+END_SRC
+
+
+#+BEGIN_SRC python :session py2
+
+  # Make a toy dataset
+  X, y = make_classification(
+  n_samples=1000,
+  n_features=100,
+  n_informative=50,
+  n_redundant=0,
+  n_repeated=0,
+  n_classes=2,
+  random_state=1212,
+  )
+  # Split the dataset into a training set and a test set
+  X_train, X_test, y_train, y_test = train_test_split(
+  X, y, test_size=0.2, random_state=42
+  )
+  # Classification with a linear SVM
+  svc = LinearSVC(dual=False, random_state=123)
+  params_grid = {"C": [10 ** k for k in range(-3, 4)]}
+  clf = GridSearchCV(svc, params_grid)
+  clf.fit(X_train, y_train)
+
+#+END_SRC
+
+#+RESULTS:
+: GridSearchCV(estimator=LinearSVC(dual=False, random_state=123),
+:              param_grid={'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000]})
+
+#+BEGIN_SRC python :session py2 :results output
+print(f"Accuracy on the test set with raw data: {clf.score(X_test, y_test):0.3}")
+#+END_SRC
+
+#+RESULTS:
+: Accuracy on the test set with raw data: 0.705
