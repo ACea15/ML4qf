@@ -1,5 +1,5 @@
 import utils
-from xgboost import (XGBClassifier, XGBRegressor, Booster)
+#from xgboost import (XGBClassifier, XGBRegressor, Booster)
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import (AdaBoostClassifier, AdaBoostRegressor, BaggingClassifier,
                               BaggingRegressor, GradientBoostingClassifier,
@@ -10,4 +10,6 @@ from sklearn import tree
 
 from sklearn.neighbors import KNeighborsClassifier
 
-models_dict = utils.get_predictors(locals())
+#models_dict = utils.get_predictors(locals())
+
+

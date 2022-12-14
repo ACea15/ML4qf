@@ -111,3 +111,168 @@ class ModelHyperTuning:
         # Refit the XGB Classifier with the best params
         self.newmodel = ModelPrediction(self.predictor_name, **self.searcher.best_params_)
         self.newmodel.run(X_train, y_train, X_test, y_test, print_info, **kwargs)
+
+
+# # Create a model
+# def create_model(hu=256, lookback=60):
+
+#     tensorflow.keras.backend.clear_session()   
+    
+#     # instantiate the model
+#     model = Sequential()
+#     model.add(LSTM(units=hu, input_shape=(lookback, 1), activation = 'relu', return_sequences=False, name='LSTM'))
+#     model.add(Dense(units=1, name='Output'))              # can also specify linear activation function 
+    
+#     # specify optimizer separately (preferred method))
+# #     opt = RMSprop(lr=0.001, rho=0.9, epsilon=1e-08, decay=0.0)
+#     opt = Adam(lr=0.001, epsilon=1e-08, decay=0.0)       # adam optimizer seems to perform better for a single lstm
+    
+#     # model compilation
+#     model.compile(optimizer=opt, loss='mse', metrics=['mae'])
+    
+#     return model
+
+
+# # Specify callback functions
+# model_path = (results_path / 'model.h5').as_posix()
+# logdir = os.path.join("logs", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+
+# my_callbacks = [
+#     EarlyStopping(patience=10, monitor='loss', mode='min', verbose=1, restore_best_weights=True),
+#     ModelCheckpoint(filepath=model_path, verbose=1, monitor='loss', save_best_only=True),
+#     TensorBoard(log_dir=logdir, histogram_freq=1)
+# ]
+
+
+
+# # Model fitting
+# lstm_training = model.fit(X_train, 
+#                           y_train, 
+#                           batch_size=64, 
+#                           epochs=500, 
+#                           verbose=1, 
+#                           callbacks=my_callbacks, 
+#                           shuffle=False)
+
+
+lstm_type
+optimizer
+optimizer_settings
+loss_function
+metrics
+layers
+
+# compile model five
+nn = Sequential()
+nn.add(LSTM(50, activation='relu', input_shape=(3, 1)))
+nn.add(Dense(1))
+nn.compile(optimizer='adam', loss='mse')
+print(nn.summary())
+
+# fit model
+nn.fit(X, y, batch_size=5, epochs=2000, validation_split=0.2, verbose=0)
+
+
+### Inputs...
+
+lookback = 60
+layers = dict()
+layers.update(LSTM={'units':4,
+                    'input_shape':(lookback, 1),
+                    'activation':'relu',
+                    'return_sequences': False,
+                    'name': 'LSTM'})
+
+lstm_type = 'Sequential'
+OPTIMIZER = 'Adam' # RMSprop
+OPTIMIZER_SETT = dict()
+OPTIMIZER_SETT.update(lr=0.001, epsilon=1e-08, decay=0.0)
+COMPILATION_SETT = {'loss':'mse', 'metrics':['mae']}
+# tensorflow modules
+import tensorflow.keras.models as tf_models #Sequential
+import tensorflow.keras.layers as tf_layers #import Dense, Dropout, Flatten, LSTM
+import tensorflow.keras.optimizers as tf_optimizers #import Adam, RMSprop 
+from tensorflow.keras.utils import plot_model
+import tensorflow.keras.callbacks as tf_callbacks#import EarlyStopping, ModelCheckpoint, TensorBoard
+
+
+# build model
+model = getattr(tf_models, lstm_type)
+for k, v in layers.items():
+    layer_i = getattr(tf_layers, k)
+    model.add(layer_i(**v))
+
+# build optimizer
+optimizer = getattr(tf_optimizers, optimizer)
+opt = optimizer(**OPTIMIZER_SETT)
+
+# train the model
+model.compile(optimizer=opt, **COMPILATION_SETT)
+
+class KerasModel:
+
+    def __init__(self):
+        pass
+
+class SKModel:
+
+    def __init__(self):
+        pass
+    
+
+# Model fitting
+lstm_training = model.fit(X_train, 
+                          y_train, 
+                          batch_size=64, 
+                          epochs=500, 
+                          verbose=1, 
+                          callbacks=my_callbacks, 
+                          shuffle=False)
+
+
+
+# #     opt = RMSprop(lr=0.001, rho=0.9, epsilon=1e-08, decay=0.0)
+#     opt = Adam(lr=0.001, epsilon=1e-08, decay=0.0)       # adam optimizer seems to perform better for a single lstm
+
+
+# predict the outcome
+test_input = np.array([70,71,72])
+test_input = test_input.reshape((1, 3, 1))
+test_output = nn.predict(test_input, verbose=0)
+print(test_output)
+
+
+### Inputs...
+
+lookback = 60
+layers = dict()
+layers.update(LSTM={'units':4,
+                    'input_shape':(lookback, 1),
+                    'activation':'relu',
+                    'return_sequences': False,
+                    'name': 'LSTM'})
+
+
+TICKER ='BSP.F'
+YEAR0 = 2022
+MONTH0 = 1
+DAY0 = 15
+YEARS_MODELLING = 5.5
+YEARS_BACKTESTING = 0
+YEAR = YEAR0 - YEARS_BACKTESTING
+NUM_DAYS = 365 * YEARS_MODELLING 
+df0 = f1.get_data(TICKER, YEAR, MONTH0, DAY0, NUM_DAYS)
+
+FEATURES1 = {'return_': [1, 2, 5, 8, 15, 23],
+            'momentum_': [1, 2, 5, 8, 15, 23],
+            'OC_': None,
+            'HL_': None,
+            'Ret_': list(range(10, 90, 10)),
+            'Std_': list(range(10, 90, 10)),
+            'MA_': [5, 10, 25, 50],
+            'EMA_': [5, 10, 25, 50],
+            'sign_return_': [1, 2, 5, 8, 15, 23],
+            'sign_momentum_':[1, 2, 5, 8, 15, 23]
+            }
+df_x1, features_m1 = f1.get_features(df0, price='Adj Close', 
+                                     log_return=True, **FEATURES1)
