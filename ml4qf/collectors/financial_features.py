@@ -1,3 +1,4 @@
+"""sfdsfd."""
 import numpy as np
 import os
 import pandas as pd
@@ -6,22 +7,59 @@ from datetime import date
 import pandas_datareader as pdr
 from collections import defaultdict
 
+def add_returns(self, df, price='Close', log_return=False, *args, **kwargs):
+    """
+    Add the returns to a data frame with prices.
+    """
+    #self.df.rename(columns={price: 'price'})
+    if not log_return:
+        df['return'] = df[price].pct_change()
+    else:
+        df['return'] = np.log(df['price'] /
+                              df['price'].shift(periods=1))
+
 
 class FeaturesPrice:
-
-    def __init__(self):
+    """
+    Creates financial features using arbitrary rolling windows.
+    """
+    
+    def __init__(self, df: pd.DataFrame, features: dict = None):
+        self.df = df
+        self.features_in = features
         self.features_list = []
+        if features is not None:
+            self.get_features(**features)
         
-    def add_feature(self, df, label, period=None):
+    def get_features(self, **kwargs):
+        """
+        Below code features to an existing data frame
+        """
+
+        for k, v in kwargs.items():
+            if (v == None or v == ''):
+                self.add_feature(k)
+            elif isinstance(v, (list, np.ndarray)):
+                for vi in v:
+                    self.add_feature(k, vi)
+            elif isinstance(v, (int, float)):
+                self.add_feature(k, v)
+            else:
+                raise ValueError('Invalid value for feature')
+
+    def drop_nans(self):
+        """Drop NaN values in the dataframe."""
+        self.df.dropna(inplace=True)
+
+    def add_feature(self, label, period=None):
         _type = getattr(self, label)
         if period is None:
-            df[f"{label}"] = _type(df, period)
+            self.df[f"{label}"] = _type(self.df, period)
             self.features_list.append(f"{label}")
         else:
-            df[f"{label}{period}d"] = _type(df, period)
+            self.df[f"{label}{period}d"] = _type(self.df, period)
             self.features_list.append(f"{label}{period}d")
-        return df
-        
+
     def return_(self, df, period):
         
         out = df['return'].shift(periods=period)
@@ -76,32 +114,6 @@ class FeaturesPrice:
         momentum_var = 'momentum_{}d'.format(period)
         out = df[momentum_var].apply(lambda x: 0 if x<0 else 1)
         return out
-
-def get_features(data, price='Close', log_return=False, **kwargs):
-    '''
-    Below code features to an existing data frame
-    '''
-    df = data#pd.DataFrame(data[price])
-    df = df.rename(columns={price: 'price'})
-    if not log_return:
-        df['return'] = df.pct_change()
-    else:
-        df['return'] = np.log(df['price']/df['price'].shift(periods=1))
-        
-    features = FeaturesPrice()    
-    for k, v in kwargs.items():
-        if v is None:
-            df = features.add_feature(df, k)
-        elif isinstance(v, (list, np.ndarray)):
-            for vi in v:
-                df = features.add_feature(df, k, vi)
-        elif isinstance(v, (int, float)):
-            df = features.add_feature(df, k, v)
-        else:
-            raise ValueError('Invalid value for feature')
-    # Drop NaN values
-    df.dropna(inplace=True)
-    return df, features.features_list
 
 def features_label(features_list):
     

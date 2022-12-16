@@ -1,0 +1,15 @@
+name: qfpy
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - numpy
+  - pandas
+  - scipy
+  - matplotlib
+  - numba
+  - scikit-learn
+  - umap-learn
+  - pip
+  - pip:
+    - -r requirements.txt
