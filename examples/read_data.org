@@ -13,7 +13,7 @@ matplotlib.rcParams['figure.dpi'] = 80
 
 #+BEGIN_SRC python :session py3
 # Generate a 4D dataset
-np.random.seed(42)
+\np.random.seed(42)
 data = np.random.rand(800, 4)
 # UMAP Transformation
 reducer = UMAP()

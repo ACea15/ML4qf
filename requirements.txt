@@ -1,8 +1,6 @@
 cufflinks
 graphviz
 h5py
-keras
-keras-tuner
 MiniSom
 missingno
 networkx

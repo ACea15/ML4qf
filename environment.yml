@@ -9,6 +9,7 @@ dependencies:
   - matplotlib
   - numba
   - scikit-learn
+  - tensorflow
   - umap-learn
   - pip
   - pip:

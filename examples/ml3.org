@@ -11,6 +11,40 @@ matplotlib.rcParams['figure.dpi'] = 80
 #+END_SRC
 
 
+
+#+begin_src python :results value raw :return tabulate(df, headers=df.columns, tablefmt='orgtbl')
+from tabulate import tabulate
+import pandas as pd
+df = pd.DataFrame({
+    "a": [1,2,3],
+    "b": [4,5,6]
+})
+#+end_src
+
+#+RESULTS:
+|   | a | b |
+|---+---+---|
+| 0 | 1 | 4 |
+| 1 | 2 | 5 |
+| 2 | 3 | 6 |
+
+
+#+begin_src python :results value raw :return tabulate(d1, headers=d1.keys(), tablefmt='orgtbl')
+from tabulate import tabulate
+import pandas as pd
+d1 ={"a": [1,2,3],
+     "b": [4,5,6]}
+#+end_src
+
+#+RESULTS:
+| a | b |
+|---+---|
+| 1 | 4 |
+| 2 | 5 |
+| 3 | 6 |
+
+
+
 #+BEGIN_SRC python :session py3
 # Generate a 4D dataset
 np.random.seed(42)
