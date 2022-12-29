@@ -1,6 +1,8 @@
 from dataclasses import dataclass, replace
 from typing import Union
 
+list_engines = ['keras', 'scikit']
+
 def factory_engines(engine_type, settings):
     """
 
@@ -59,7 +61,6 @@ class Input_ticker:
 
         return replace(self, **kwargs)
 
-list_engines = ['keras', 'scikit']
 
 @dataclass
 class Input_keras:

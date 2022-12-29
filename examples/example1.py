@@ -35,6 +35,23 @@ layers_dict['LSTM'] = dict(units=5, activation = 'relu', return_sequences=False,
 layers_dict['Dense'] = dict(units=1, name='Output')
 
 def dict2tuple(x: dict) -> tuple:
+    """Converts a dictionary into an equivalent tuple structure
+
+    Parameters
+    ----------
+    x : dict
+        input dictionary
+
+    Returns
+    -------
+    tuple
+        Output tuple
+
+    Examples
+    --------
+    FIXME: Add docs.
+
+    """
 
     y = []
     for k, v in x.items():
