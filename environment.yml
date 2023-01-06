@@ -11,6 +11,7 @@ dependencies:
   - scikit-learn
   - tensorflow
   - umap-learn
+  - ta-lib
   - pip
   - pip:
     - -r requirements.txt

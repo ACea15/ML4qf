@@ -15,4 +15,7 @@ shap
 xgboost
 xlrd
 yfinance
+keras-tuner
+tensorboard
+pandas_ta
 python-lsp-server[all]
