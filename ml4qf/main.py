@@ -24,7 +24,6 @@ class Labels:
             df['Target'].count
         return df
 
-
     
 import sklearn.model_selection
 class HyperTuning:

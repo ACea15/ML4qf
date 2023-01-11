@@ -1,0 +1,138 @@
+* House keeping
+#+begin_src elisp :results none
+(add-to-list 'org-structure-template-alist
+'("sp" . "src python :session py1"))
+(add-to-list 'org-structure-template-alist
+'("se" . "src elisp"))
+
+(setq org-confirm-babel-evaluate nil)
+#+end_src
+
+#+begin_src emacs-lisp  :session py1 :results none
+(pyvenv-workon "qfpy")
+(require 'org-tempo)
+#+end_src
+
+* Import libraries
+#+BEGIN_SRC python :session py1 :results output silent
+
+  import numpy as np
+  import yfinance as yf
+  import ml4qf
+  # from umap import UMAP
+  # import matplotlib.pyplot as plt
+  # from mpl_toolkits.mplot3d import Axes3D
+  # import matplotlib
+  # matplotlib.rcParams['figure.dpi'] = 80
+
+  from minisom import MiniSom
+  from sklearn.model_selection import train_test_split
+  from sklearn.metrics import classification_report
+
+  import plotly.express as px
+  import scipy.stats
+  import pandas as pd
+  import pandas_ta as ta
+  import ml4qf.inputs
+  import  ml4qf.collectors.financial_features
+#+END_SRC
+
+* Introduction
+#+begin_src python :session py1 :results none 
+df = yf.download("EADSY", start="2014-10-02", end="2019-10-1", interval='1d')
+#df.index
+#+end_src
+
+
+* Feature engineering
+
+#+begin_src python :session py1
+FEATURES1 = {'momentum_': [1, 2, 5, 8, 15, 23],
+            'OC_': None,
+            'HL_': None,
+            'Ret_': [1,2],
+            'RetLog_': list(range(10, 90, 10)),
+            'Std_': list(range(10, 90, 10)),
+            'MA_': [5, 10, 25, 50],
+            'EMA_': [5, 10, 25, 50],
+            'sign_return_': [1, 2, 5, 8, 15, 23],
+            'volume_':None,
+            "percent_return": [1],
+            "percent_return": dict(length=2, append=False),
+            "log_return": [1, 2]
+            }
+
+data = ml4qf.collectors.financial_features.FinancialData("EADSY", 2019, 10, 1, 365*5, FEATURES1)
+
+#+end_src
+
+#+RESULTS:
+
+
+#+begin_src python :session py1
+df_  = data.features.df.drop(data.df.columns, axis=1)
+df_['target'] = np.where(data.df['return'].shift(-1) > 0, 1, 0)
+df_.dropna(inplace=True)
+#+end_src
+
+** Exploratory data analysis
+
+
+
+#+begin_src python :session py1 :results file
+fig1_path= './img/stock_Close.png'
+fig1 = px.line(df_, y=[''])
+fig1.write_image(fig1_path)
+fig1_path
+#+end_src
+
+
+** Feature scaling
+
+#+begin_src python :session py1
+df[(np.abs(scipy.stats.zscore(df)) < 3).all(axis=1)]
+#+end_src
+
+#+begin_src python :session py1 :results output
+
+
+AllStrategy = ta.AllStrategy
+print("name =", AllStrategy.name)
+print("description =", AllStrategy.description)
+print("created =", AllStrategy.created)
+print("ta =", AllStrategy.ta)
+
+df.ta.strategy(ta.CommonStrategy)
+#+end_src
+** Label 
+
+#+begin_src python :session py1
+data['target'] = np.where(data['close'].pct_change(-1) > 0, 1, 0)
+#+end_src
+
+*** Class imbalance
+
+#+begin_src python :session py1
+#+end_src
+** Split data
+#+begin_src python :session py1
+X_train, X_test, y_train, y_test = train_test_split(data, labels, shuffle=False)
+#+end_src
+
+** SOM
+
+#+begin_src python :session py1
+########
+
+
+som = MiniSom(7, 7, 4, sigma=3, learning_rate=0.5, 
+              neighborhood_function='triangle', random_seed=10)
+som.pca_weights_init(X_train)
+som.train(X_train, 500, verbose=True)
+
+#+end_src
+
+#+begin_src python :session py1
+W = som.get_weights()
+selected_labels, target_name = model_som.som_feature_selection(W, labels=, target_index = -1, a = 0.04)
+#+end_src

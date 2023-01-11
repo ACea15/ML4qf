@@ -1,4 +1,12 @@
-#+BEGIN_SRC python :session py3 :results output silent
+#+begin_src emacs-lisp  session: py1
+(pyvenv-workon "qfpy")
+#+end_src
+
+#+RESULTS:
+
+
+
+#+BEGIN_SRC python :session py3 
 
 # Import libraries
 import numpy as np
@@ -9,6 +17,8 @@ import matplotlib
 matplotlib.rcParams['figure.dpi'] = 80
 
 #+END_SRC
+
+#+RESULTS:
 
 
 

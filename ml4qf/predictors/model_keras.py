@@ -1,7 +1,5 @@
 import numpy as np
 import pickle
-import ml4qf.predictors.model as model
-from dataclasses import dataclass
 from sklearn.base import BaseEstimator
 
 # tensorflow modules
@@ -76,7 +74,7 @@ class Model_keras(BaseEstimator):
         """
         
         # Check that X and y have correct shape
-        X, y = check_X_y(X, y)
+        #X, y = check_X_y(X, y)
         # Store the classes seen during fit
         self.classes_ = unique_labels(y)
         self.n_features_in_ = X.shape[1]
@@ -195,24 +193,22 @@ class Model_keras(BaseEstimator):
 
 
 
+if (__name__ == '__main__'):
+    
+
+    from sklearn.utils.estimator_checks import check_estimator
+    from sklearn.svm import LinearSVC
+    #check_estimator(LinearSVC())  # passes
+
+    check_estimator(Model_keras())
 
 
-
-        
-
-from sklearn.utils.estimator_checks import check_estimator
-from sklearn.svm import LinearSVC
-#check_estimator(LinearSVC())  # passes
-
-check_estimator(Model_keras())
-
-
-# summarize the sonar dataset
-from pandas import read_csv
-# load dataset
-url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/sonar.csv'
-dataframe = read_csv(url, header=None)
-# split into input and output elements
-data = dataframe.values
-X, y = data[:, :-1], data[:, -1]
-print(X.shape, y.shape)
+    # summarize the sonar dataset
+    from pandas import read_csv
+    # load dataset
+    url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/sonar.csv'
+    dataframe = read_csv(url, header=None)
+    # split into input and output elements
+    data = dataframe.values
+    X, y = data[:, :-1], data[:, -1]
+    print(X.shape, y.shape)

@@ -65,8 +65,50 @@ class Input_ticker:
 @dataclass
 class Input_keras:
 
-    LAYERS: tuple
+    LAYERS: Union[tuple, str]
+    KERAS_MODEL: str ='Sequential'
+    OPTIMIZER_NAME: str='adam'
+    LOSS_NAME: str='mse'
+    METRICS: str=None
+    OPTIMIZER_SETT: str =None
+    COMPILE_SETT: str =None
+    LOSS_SETT: str =None
+    
+    def __post_init__(self):
 
+        if isinstance(self.LAYERS, dict):
+            self.LAYERS = dict2tuple(self.LAYERS)
+    
 @dataclass
 class Input_scikit:
     pass
+
+def dict2tuple(x: dict) -> tuple:
+    """Converts a dictionary into an equivalent tuple structure
+
+    Parameters
+    ----------
+    x : dict
+        input dictionary
+
+    Returns
+    -------
+    tuple
+        Output tuple
+
+    Examples
+    --------
+    FIXME: Add docs.
+
+    """
+
+    y = []
+    for k, v in x.items():
+        z = []
+        z.append(k)
+        if isinstance(v, dict):
+            z.append(dict2tuple(v))
+        else:
+            z.append(v)
+        y.append(tuple(z))
+    return tuple(y)

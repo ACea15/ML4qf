@@ -36,3 +36,6 @@ plt.scatter(
 plt.gca().set_aspect('equal', 'datalim')
 plt.title('UMAP projection of the Penguin dataset', fontsize=24);
 plt.show()
+
+
+
