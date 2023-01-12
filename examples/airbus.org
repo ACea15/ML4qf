@@ -34,13 +34,16 @@
   from minisom import MiniSom
   from sklearn.model_selection import train_test_split
   from sklearn.metrics import classification_report
+  import scipy.optimize
+  import sklearn.compose
 
   import plotly.express as px
   import scipy.stats
   import pandas as pd
   import pandas_ta as ta
   import ml4qf.inputs
-  import  ml4qf.collectors.financial_features
+  import ml4qf.collectors.financial_features
+  import ml4qf.transformers
 #+END_SRC
 
 * Introduction
@@ -85,8 +88,41 @@ fig1_path
 #+end_src
 
 #+RESULTS:
-[[file:]]
+[[file:./img/stock_Close.png]]
 
+
+** Label 
+
+*** Class imbalance
+
+#+begin_src python :session py1
+  def fix_imbalance(x, *args):
+      #print(args)
+      #print(args.df['returns'].shift(-1))
+      bins = np.where(args[0].df.loc[args[1]]['returns'].shift(-1) > x, 1, 0)
+      len_bins = len(bins) 
+      len1 = sum(bins)
+      len0 =  len_bins - len1
+      return ((len1 - len0) / len_bins)
+
+  #ymin = scipy.optimize.minimize(fix_imbalance, 0.00068, data)
+  #ymin = scipy.optimize.newton(fix_imbalance, 0.000, args=(data,))
+#+end_src
+
+#+RESULTS:
+
+#+begin_src python :session py1
+  df_  = data.features.df.drop(data.df.columns, axis=1)
+  df_.dropna(inplace=True)
+  ymin = scipy.optimize.bisect(fix_imbalance, -0.01, 0.01, args=(data, df_.index))
+  df_['target'] = np.where(data.df.loc[df_.index]['returns'].shift(-1) > ymin, 1, 0)
+  df_.target.value_counts()
+#+end_src
+
+#+RESULTS:
+: 0    589
+: 1    588
+: Name: target, dtype: int64
 
 ** Feature scaling
 
@@ -140,106 +176,49 @@ volume_            12.346371
 PCTRET_2            5.631053
 LOGRET_1            6.888361
 LOGRET_2            6.028731
-target              1.000850
 dtype: float64
 #+end_example
 
 
 #+begin_src python :session py1
-  import sklearn.preprocessing
-  class Transformer:
-
-      def __init__(self,  transformer_name, transformer_settings={}):
-
-
-          self.transformer_name = transformer_name
-          self.transformer_settings = transformer_settings
-          self.transformer = None
-          self.set_transformer()
-
-      def set_transformer(self):
-
-          self.transformer_type = getattr(sklearn.preprocessing, self.transformer_name)
-          self.transformer = self.transformer_type(**self.transformer_settings)
-
-
-  def build_transformation(df, transformers):
-
-      column_transformers = []
-      for k, v in transformers.items():
-          name = k.replace('Scaler', '')
-          if 'settings' in v.keys():
-              transformer_ins = Transformer(k, v['settings'])
-          else:
-              transformer_ins = Transformer(k)
-          transformer = transformer_ins.transformer
-          features_list = []
-          for fi in v['features']:
-              for ci in df.columns:
-                  if fi in ci[:len(fi)]:
-                      features_list.append(ci)
-          column_transformers.append((name, transformer, features_list))
-      return column_transformers
-
-#+end_src
-
-#+RESULTS:
-
-#+begin_src python :session py1
-
-  import sklearn.compose
 
   transformers = {'MinMaxScaler': {'features': ['momentum']},
                   'StandardScaler': {'features': ['EMA', 'MA', 'Std']},
                   'RobustScaler': {'features': ['volume', 'HL']}
                   }
 
-  columns = build_transformation(df_, transformers)
+  columns = ml4qf.transformers.build_transformation(df_, transformers)
   ct = sklearn.compose.ColumnTransformer(columns, remainder='passthrough')
-  ct.fit(df_)
-  df_2 = ct.transform(df_)
 #+end_src
 
 #+RESULTS:
 
-** Label 
-
-*** Class imbalance
-
+*** Split data
 #+begin_src python :session py1
-  import scipy.optimize
-  def fix_imbalance(x, *args):
-      #print(args)
-      #print(args.df['returns'].shift(-1))
-      bins = np.where(args[0].df.loc[args[1]]['returns'].shift(-1) > x, 1, 0)
-      len_bins = len(bins) 
-      len1 = sum(bins)
-      len0 =  len_bins - len1
-      return ((len1 - len0) / len_bins)
+Xtrain, Xtest = train_test_split(df_.to_numpy(), train_size=0.8, shuffle=False)
+len_train = len(Xtrain)
+len_test = len(Xtest)
+Xtrain_scaled = ct.fit_transform(df_.iloc[:len_train, :])
+#Xtrain_scaled = ct.transform(Xtrain)
 
-  #ymin = scipy.optimize.minimize(fix_imbalance, 0.00068, data)
-  #ymin = scipy.optimize.newton(fix_imbalance, 0.000, args=(data,))
 #+end_src
 
 #+RESULTS:
-
-#+begin_src python :session py1
-  df_  = data.features.df.drop(data.df.columns, axis=1)
-  df_.dropna(inplace=True)
-  ymin = scipy.optimize.bisect(fix_imbalance, -0.01, 0.01, args=(data, df_.index))
-  df_['target'] = np.where(data.df.loc[df_.index]['returns'].shift(-1) > ymin, 1, 0)
-  df_.target.value_counts()
-#+end_src
-
-#+RESULTS:
-: 0    589
-: 1    588
-: Name: target, dtype: int64
-
-** Split data
-#+begin_src python :session py1
-X_train, X_test, y_train, y_test = train_test_split(data, labels, shuffle=False)
-#+end_src
+#+begin_example
+Date
+2015-01-28    1
+2015-01-29    0
+2015-01-30    1
+2015-02-02    1
+2015-02-03    0
+             ..
+2019-09-24    1
+2019-09-25    0
+2019-09-26    0
+2019-09-27    1
+2019-09-30    0
+Name: target, Length: 1177, dtype: int64
+#+end_example
 
 ** SOM
 
@@ -252,11 +231,9 @@ som = MiniSom(7, 7, 4, sigma=3, learning_rate=0.5,
 som.pca_weights_init(X_train)
 som.train(X_train, 500, verbose=True)
 
-#+end_src
-
-#+begin_src python :session py1
 W = som.get_weights()
-selected_labels, target_name = model_som.som_feature_selection(W, labels=, target_index = -1, a = 0.04)
+selected_labels, target_name = model_som.som_feature_selection(W, labels=df_.columns + ['target'], target_index = -1, a = 0.04)
+
 #+end_src
 
 * Base line model
