@@ -49,7 +49,6 @@ class Model_keras(BaseEstimator):
 
         """
 
-
         self.keras_model = keras_model
         self.layers = layers
         self.loss_name = loss_name

@@ -1,0 +1,122 @@
+#+PROPERTY: header-args :tangle ./lstm_classification.py :mkdirp yes
+* House keeping
+#+begin_src elisp :results none :tangle no
+(add-to-list 'org-structure-template-alist
+'("sp" . "src python :session py_lstm"))
+(add-to-list 'org-structure-template-alist
+'("se" . "src elisp"))
+
+(setq org-confirm-babel-evaluate nil)
+#+end_src
+
+#+begin_src emacs-lisp  :session py_lstm :results none :tangle no
+(pyvenv-workon "qfpy")
+(require 'org-tempo)
+#+end_src
+
+#+begin_src python  :session py_lstm :results none
+  import sys
+  file_path = sys.path[1]
+  sys.path.append(file_path + "/../")
+#+end_src
+
+* Import libraries
+#+BEGIN_SRC python :session py_lstm :results output silent
+
+  import numpy as np
+  import yfinance as yf
+  import ml4qf
+  import ml4qf.utils
+  # from umap import UMAP
+  # import matplotlib.pyplot as plt
+  # from mpl_toolkits.mplot3d import Axes3D
+  # import matplotlib
+  # matplotlib.rcParams['figure.dpi'] = 80
+
+  import minisom
+  from sklearn.model_selection import train_test_split
+  import sklearn.metrics
+  import scipy.optimize
+  import sklearn.compose
+
+  import plotly.express as px
+  import scipy.stats
+  import pandas as pd
+  import pandas_ta as ta
+  import ml4qf.inputs
+  import ml4qf.collectors.financial_features
+  #import ml4qf.transformers
+  import tensorflow as tf
+  from tensorflow.keras.datasets import imdb
+  from tensorflow.keras.models import Sequential
+  from tensorflow.keras.layers import Dense
+  from tensorflow.keras.layers import LSTM
+  from tensorflow.keras.layers import Embedding
+  from tensorflow.keras.preprocessing import sequence
+  # fix random seed for reproducibility
+  tf.random.set_seed(7)
+#+END_SRC
+
+https://machinelearningmastery.com/sequence-classification-lstm-recurrent-neural-networks-python-keras/
+
+* Base line model
+
+#+begin_src python  :session py_lstm :results none
+  top_words = 5000
+  (X_train, y_train), (X_test, y_test) = imdb.load_data(num_words=top_words)
+  max_review_length = 500
+  X_train = sequence.pad_sequences(X_train, maxlen=max_review_length)
+  X_test = sequence.pad_sequences(X_test, maxlen=max_review_length)
+#+end_src
+
+
+#+begin_src python  :session py_lstm :results none :async
+  # create the model
+  embedding_vecor_length = 32
+  model = Sequential()
+  model.add(Embedding(top_words, embedding_vecor_length, input_length=max_review_length))
+  model.add(LSTM(100))
+  model.add(Dense(1, activation='sigmoid'))
+  model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+  print(model.summary())
+  model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=3, batch_size=64)
+#+end_src
+
+
+#+begin_src python  :session py_lstm :results output
+  # Final evaluation of the model
+  scores = model.evaluate(X_test, y_test, verbose=0)
+  print("Accuracy: %.2f%%" % (scores[1]*100))
+#+end_src
+
+#+RESULTS:
+: Accuracy: 87.38%
+
+#+begin_src python  :session py_lstm :results none
+  y_pred = model.predict(X_test)
+  print(sklearn.metrics.classification_report(np.round(y_pred)[:,0], y_test))
+#+end_src
+
+
+#+begin_src python :session py_lstm
+  layers_dict = dict()
+  layers_dict['Embedding'] = dict(input_dim=top_words, output_dim=embedding_vecor_length, input_length=max_review_length)
+  layers_dict['LSTM'] = dict(units=100)
+  layers_dict['Dense'] = dict(units=1, name='Output', activation='sigmoid')
+  layers_tuple = ml4qf.utils.dict2tuple(layers_dict)
+  compilation_settings = dict(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+  base_model = Model_keras(keras_model='Sequential', layers=layers_tuple,
+                           optimizer_name='adam', loss_name='mse', metrics=None,
+                           optimizer_sett=None, compile_sett=None, loss_sett=None)
+  history = base_model.fit(X, y)
+
+#+end_src
+
+** Classification
+
+#+begin_src python :session py_lstm
+  X_test = ct.transform(dftest_reduced) ##?
+  y_test = df_test.target.to_numpy()
+  ypred_basemodel = basemodel.predict(X_test)
+  sklearn.metrics.classification_report(y_test, ypred_basemodel)
+#+end_src

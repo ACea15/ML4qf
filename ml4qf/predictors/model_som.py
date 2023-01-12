@@ -52,3 +52,22 @@ def som_feature_selection(W, labels, target_index = 0, a = 0.04):
 
 #     selected_labels = [label for i, label in enumerate(labels) if i in feature_indeces]
     return selected_labels, target_name
+
+
+
+def classify(som, data):
+    """Classifies each sample in data in one of the classes definited
+    using the method labels_map.
+    Returns a list of the same length of data where the i-th element
+    is the class assigned to data[i].
+    """
+    winmap = som.labels_map(X_train, y_train)
+    default_class = np.sum(list(winmap.values())).most_common()[0][0]
+    result = []
+    for d in data:
+        win_position = som.winner(d)
+        if win_position in winmap:
+            result.append(winmap[win_position].most_common()[0][0])
+        else:
+            result.append(default_class)
+    return result

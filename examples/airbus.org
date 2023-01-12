@@ -1,5 +1,6 @@
+#+PROPERTY: header-args :tangle ./airbus.py :mkdirp yes
 * House keeping
-#+begin_src elisp :results none
+#+begin_src elisp :results none :tangle no
 (add-to-list 'org-structure-template-alist
 '("sp" . "src python :session py1"))
 (add-to-list 'org-structure-template-alist
@@ -8,11 +9,11 @@
 (setq org-confirm-babel-evaluate nil)
 #+end_src
 
-#+begin_src emacs-lisp  :session py1 :results none
+#+begin_src emacs-lisp  :session py1 :results none :tangle no
 (pyvenv-workon "qfpy")
 (require 'org-tempo)
 #+end_src
-
+s
 #+begin_src python  :session py1 :results none
   import sys
   file_path = sys.path[1]
@@ -25,15 +26,16 @@
   import numpy as np
   import yfinance as yf
   import ml4qf
+  import ml4qf.utils
   # from umap import UMAP
   # import matplotlib.pyplot as plt
   # from mpl_toolkits.mplot3d import Axes3D
   # import matplotlib
   # matplotlib.rcParams['figure.dpi'] = 80
 
-  from minisom import MiniSom
+  import minisom
   from sklearn.model_selection import train_test_split
-  from sklearn.metrics import classification_report
+  import sklearn.metrics
   import scipy.optimize
   import sklearn.compose
 
@@ -195,11 +197,13 @@ dtype: float64
 
 *** Split data
 #+begin_src python :session py1
-Xtrain, Xtest = train_test_split(df_.to_numpy(), train_size=0.8, shuffle=False)
-len_train = len(Xtrain)
-len_test = len(Xtest)
-Xtrain_scaled = ct.fit_transform(df_.iloc[:len_train, :])
-#Xtrain_scaled = ct.transform(Xtrain)
+  Xtrain, Xtest = train_test_split(df_.to_numpy(), train_size=0.8, shuffle=False)
+  len_train = len(Xtrain)
+  len_test = len(Xtest)
+  df_train = df_.iloc[:len_train, :]
+  df_test = df_.iloc[len_train:, :]
+  Xtrain_scaled = ct.fit_transform(df_train)
+  #Xtrain_scaled = ct.transform(Xtrain)
 
 #+end_src
 
@@ -223,31 +227,103 @@ Name: target, Length: 1177, dtype: int64
 ** SOM
 
 #+begin_src python :session py1
-########
+  ########
 
 
-som = MiniSom(7, 7, 4, sigma=3, learning_rate=0.5, 
-              neighborhood_function='triangle', random_seed=10)
-som.pca_weights_init(X_train)
-som.train(X_train, 500, verbose=True)
+  som_model = minisom.MiniSom(7, 7, 4, sigma=3, learning_rate=0.5, 
+                neighborhood_function='triangle', random_seed=10)
+  som.pca_weights_init(Xtrain_scaled)
+  som.train(Xtrain_scaled, 500, verbose=True)
 
-W = som.get_weights()
-selected_labels, target_name = model_som.som_feature_selection(W, labels=df_.columns + ['target'], target_index = -1, a = 0.04)
+  W = som.get_weights()
+  som_labels, target_name = model_som.som_feature_selection(W, labels=df_.columns + ['target'], target_index = -1, a = 0.04)
 
+  assert target_name = 'target', "targets do not coincide after som" 
+  dftrain_reduced = df_train[som_labels]
+  dftest_reduced = df_test[som_labels]
+  
 #+end_src
 
 * Base line model
 
 #+begin_src python :session py1
-
-
+  X = df_reduced.to_numpy()
+  y = df_train['target'].to_numpy()
   layers_dict = dict()
   layers_dict['LSTM'] = dict(units=5, activation = 'relu', return_sequences=False, name='LSTM')
   layers_dict['Dense'] = dict(units=1, name='Output')
-  layers_tuple = dict2tuple(layers_dict)
+  layers_tuple = ml4qf.utils.dict2tuple(layers_dict)
   base_model = Model_keras(keras_model='Sequential', layers=layers_tuple,
                            optimizer_name='adam', loss_name='mse', metrics=None,
                            optimizer_sett=None, compile_sett=None, loss_sett=None)
   base_model.fit(X, y)
+  
 
 #+end_src
+
+** Classification
+
+#+begin_src python :session py1
+  X_test = ct.transform(dftest_reduced) ##?
+  y_test = df_test.target.to_numpy()
+  ypred_basemodel = basemodel.predict(X_test)
+  sklearn.metrics.classification_report(y_test, ypred_basemodel)
+#+end_src
+
+* Cross validation
+
+** UMAP model
+
+#+begin_src python :session py1
+  import umap
+  umap_model = umap.UMAP()
+#+end_src
+
+#+RESULTS:
+
+** LSTM model
+
+
+
+** Optimisation
+
+#+begin_src python :session py1
+
+  import sklearn.pipeline
+
+  pipe = sklearn.pipeline.Pipeline([('scaler', ct),
+                                    ('umap',umap_model),
+                                    ('lstm', base_model)])
+  pipe.get_params()
+  
+#+end_src
+
+#+begin_src python :session py1
+  searcher_name = 'GridSearchCV'
+  hyper_grid = {'umap':dict(n_neighbors=[5, 15, 30, 50, 100],
+                            n_components=[3, 8, 15, 30],
+                            min_dist=[0.05, 0.1, 0.4, 0.75],
+                            random_state=42),
+                'lstm':dict()
+                }
+  searcher_settings = {'scoring':'f1',
+                       'verbose': True}
+  cv_name = 'TimeSeriesSplit'
+  cv_settings = {'n_splits': 3}
+  _hypertuning1 = HyperTuning(pipe, searcher_name, searcher_settings,
+                             hyper_grid, cv_name, cv_settings)
+  hypertuning1 = _hypertuning1()
+  hypertuning1.fit(df_train.to_numpy())
+
+#+end_src
+
+
+
+
+
+
+
+* Implementation
+
+| Name | Description | Value |
+|      |             |       |
