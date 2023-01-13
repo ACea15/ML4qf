@@ -98,19 +98,28 @@ https://machinelearningmastery.com/sequence-classification-lstm-recurrent-neural
 #+end_src
 
 
-#+begin_src python :session py_lstm
+#+begin_src python :session py_lstm 
+  import ml4qf.predictors.model_keras as model_keras 
   layers_dict = dict()
   layers_dict['Embedding'] = dict(input_dim=top_words, output_dim=embedding_vecor_length, input_length=max_review_length)
   layers_dict['LSTM'] = dict(units=100)
   layers_dict['Dense'] = dict(units=1, name='Output', activation='sigmoid')
   layers_tuple = ml4qf.utils.dict2tuple(layers_dict)
-  compilation_settings = dict(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-  base_model = Model_keras(keras_model='Sequential', layers=layers_tuple,
-                           optimizer_name='adam', loss_name='mse', metrics=None,
-                           optimizer_sett=None, compile_sett=None, loss_sett=None)
-  history = base_model.fit(X, y)
+  #compilation_settings = dict(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+  base_model = model_keras.Model_binary(keras_model='Sequential', layers=layers_tuple,
+                                        optimizer_name='adam', loss_name='binary_crossentropy',
+                                        metrics=['accuracy'], optimizer_sett=None, compile_sett=None, loss_sett=None)
+  history2 = base_model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=3, batch_size=64)
 
 #+end_src
+
+#+RESULTS:
+
+#+begin_src python  :session py_lstm 
+  y_pred = base_model._model.predict(X_test)
+  print(sklearn.metrics.classification_report(np.round(y_pred)[:,0], y_test))
+#+end_src
+
 
 ** Classification
 

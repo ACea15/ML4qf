@@ -6,7 +6,8 @@ from sklearn.base import BaseEstimator
 import tensorflow.keras.models as tf_models  # Sequential
 import tensorflow.keras.layers as tf_layers  # import Dense, Dropout, Flatten, LSTM
 import tensorflow.keras.optimizers as tf_optimizers  # import Adam, RMSprop
-import tensorflow.keras.losses as tf_losses 
+import tensorflow.keras.losses as tf_losses
+import tensorflow.keras.preprocessing.sequence as tf_sequence
 from tensorflow.keras.utils import plot_model
 import tensorflow.keras.callbacks as tf_callbacks # import EarlyStopping,
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
@@ -23,11 +24,12 @@ def to_dict(*args):
             out.append(args_i)
     return out
 
-class Model_keras(BaseEstimator):
+class Model(BaseEstimator):
 
-    def __init__(self,  keras_model='Sequential', layers=(),
+    def __init__(self,  keras_model='Sequential', layers=(), seqlen=0,
                  optimizer_name='adam', loss_name='mse', metrics=None,
-                 optimizer_sett=None, compile_sett=None, loss_sett=None):
+                 optimizer_sett=None, compile_sett=None, loss_sett=None,
+                 timeseries_sett=None):
         """
 
         Parameters
@@ -51,13 +53,15 @@ class Model_keras(BaseEstimator):
 
         self.keras_model = keras_model
         self.layers = layers
+        self.seqlen = seqlen
         self.loss_name = loss_name
-        self.loss_sett =loss_sett        
+        self.loss_sett = loss_sett        
         self.metrics = metrics
         self.optimizer_name = optimizer_name
-        self.optimizer_sett =optimizer_sett
-        self.compile_sett =compile_sett
-
+        self.optimizer_sett = optimizer_sett
+        self.compile_sett = compile_sett
+        self.timeseries_sett = timeseries_sett
+        
     def fit(self, X, y, **kwargs):
         """Fit method
 
@@ -72,17 +76,27 @@ class Model_keras(BaseEstimator):
         """
         
         # Check that X and y have correct shape
-        #X, y = check_X_y(X, y)
+        X, y = check_X_y(X, y)
         # Store the classes seen during fit
         self.classes_ = unique_labels(y)
-        self.n_features_in_ = X.shape[1]
+        self.n_features_in_ = X.shape[1]        
         self.build()
         self.set_callbacks()
-        self._fit_history = self._model.fit(X,
-                                            y,
-                                            callbacks=self._callbacks,
-                                            **kwargs
-                                            )
+        if self.seqlen > 0:
+            self.X_generated, self.y_generated = tf_sequence.TimeseriesGenerator(X,
+                                                                                 y,
+                                                                                 length=self.seqlen)
+            self._fit_history = self._model.fit(self.X_generated,
+                                                self.y_generated,
+                                                callbacks=self._callbacks,
+                                                **kwargs
+                                                )
+        else:
+            self._fit_history = self._model.fit(X,
+                                                y,
+                                                callbacks=self._callbacks,
+                                                **kwargs
+                                                )
         return self
 
     # def predict(self, X: np.array, **kwargs):
@@ -93,12 +107,14 @@ class Model_keras(BaseEstimator):
 
         dic = {"keras_model": self.keras_model,
                "layers": self.layers,
+               "seqlen": self.seqlen,
                "optimizer_name": self.optimizer_name,
                "optimizer_sett": self.optimizer_sett,
                "compile_sett": self.compile_sett,
                "loss_sett": self.loss_sett,
                "loss_name": self.loss_name,
-               "metrics": self.metrics
+               "metrics": self.metrics,
+               "timeseries_sett": self.timeseries_sett
                }
         return dic
 
@@ -183,30 +199,37 @@ class Model_keras(BaseEstimator):
         self._callbacks = None
 
 
+class Model_binary(Model):
 
+    def __init__(self,  keras_model='Sequential', layers=(), seqlen=0,
+                 optimizer_name='adam', loss_name='binary_crossentropy', metrics=None,
+                 optimizer_sett=None, compile_sett=None, loss_sett=None, timeseries_sett=None):
 
-
-
-
-
-
+        super().__init__(keras_model, layers, seqlen, optimizer_name,
+                         loss_name, metrics, optimizer_sett, compile_sett,
+                         loss_sett, timeseries_sett)
+        
+    def predict(self, X):
+        
+        y = self._model.predict(X)
+        ypred = np.round(y)[:, 0]
+        return ypred
 
 if (__name__ == '__main__'):
-    
+
 
     from sklearn.utils.estimator_checks import check_estimator
-    from sklearn.svm import LinearSVC
     #check_estimator(LinearSVC())  # passes
 
-    check_estimator(Model_keras())
+    check_estimator(Model())
 
 
-    # summarize the sonar dataset
-    from pandas import read_csv
-    # load dataset
-    url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/sonar.csv'
-    dataframe = read_csv(url, header=None)
-    # split into input and output elements
-    data = dataframe.values
-    X, y = data[:, :-1], data[:, -1]
-    print(X.shape, y.shape)
+    # # summarize the sonar dataset
+    # from pandas import read_csv
+    # # load dataset
+    # url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/sonar.csv'
+    # dataframe = read_csv(url, header=None)
+    # # split into input and output elements
+    # data = dataframe.values
+    # X, y = data[:, :-1], data[:, -1]
+    # print(X.shape, y.shape)

@@ -247,17 +247,17 @@ Name: target, Length: 1177, dtype: int64
 * Base line model
 
 #+begin_src python :session py1
+  import ml4qf.predictors.model_keras as model_keras
   X = df_reduced.to_numpy()
   y = df_train['target'].to_numpy()
   layers_dict = dict()
   layers_dict['LSTM'] = dict(units=5, activation = 'relu', return_sequences=False, name='LSTM')
   layers_dict['Dense'] = dict(units=1, name='Output')
   layers_tuple = ml4qf.utils.dict2tuple(layers_dict)
-  base_model = Model_keras(keras_model='Sequential', layers=layers_tuple,
-                           optimizer_name='adam', loss_name='mse', metrics=None,
-                           optimizer_sett=None, compile_sett=None, loss_sett=None)
+  base_model = model_keras.Model(keras_model='Sequential', layers=layers_tuple,
+                                 optimizer_name='adam', loss_name='binary_crossentropy', metrics=None,
+                                 optimizer_sett=None, compile_sett=None, loss_sett=None)
   base_model.fit(X, y)
-  
 
 #+end_src
 
@@ -270,6 +270,10 @@ Name: target, Length: 1177, dtype: int64
   sklearn.metrics.classification_report(y_test, ypred_basemodel)
 #+end_src
 
+#+begin_src python  :session py_lstm :results none
+# summary
+basemodel._model.summary()
+#+end_src
 * Cross validation
 
 ** UMAP model
@@ -278,8 +282,6 @@ Name: target, Length: 1177, dtype: int64
   import umap
   umap_model = umap.UMAP()
 #+end_src
-
-#+RESULTS:
 
 ** LSTM model
 
@@ -300,11 +302,16 @@ Name: target, Length: 1177, dtype: int64
 
 #+begin_src python :session py1
   searcher_name = 'GridSearchCV'
+  layers_hyper = []
+  layers1_hyper = dict()
+  layers1_hyper['LSTM'] = dict(units=5, activation = 'relu', return_sequences=False, name='LSTM')
+  layers1_hyper['Dense'] = dict(units=1, name='Output')
+  layers1_hyper = ml4qf.utils.dict2tuple(layers_dict)
   hyper_grid = {'umap':dict(n_neighbors=[5, 15, 30, 50, 100],
                             n_components=[3, 8, 15, 30],
                             min_dist=[0.05, 0.1, 0.4, 0.75],
                             random_state=42),
-                'lstm':dict()
+                'lstm':dict(seqlen=[10, 25, 50], )
                 }
   searcher_settings = {'scoring':'f1',
                        'verbose': True}
@@ -316,11 +323,6 @@ Name: target, Length: 1177, dtype: int64
   hypertuning1.fit(df_train.to_numpy())
 
 #+end_src
-
-
-
-
-
 
 
 * Implementation
