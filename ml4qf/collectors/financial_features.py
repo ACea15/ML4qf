@@ -14,8 +14,8 @@ class FinancialData:
                  PRICE='Close', df=None, **kwargs):
 
         if df is None:
-            self.df = self.get_data(TICKER, YEAR0,
-                                    MONTH0, DAY0, NUM_DAYS)
+            self.df, self.label = self.get_data(TICKER, YEAR0,
+                                                MONTH0, DAY0, NUM_DAYS, label='FD')
             self.df['price'] = self.df[PRICE]
             self.add_returns()
         else:
@@ -35,7 +35,7 @@ class FinancialData:
         return cls(inputs, df.copy())
 
     @staticmethod
-    def get_data(ticker, year, month, day, num_days, interval='1d'):
+    def get_data(ticker, year, month, day, num_days, interval='1d', label=None):
         """
 
 
@@ -72,7 +72,11 @@ class FinancialData:
             print("***** Loading data from Yahoo Finance *****")
             df = yf.download(ticker, start=date_start, end=date_end, interval=interval)
             df.to_csv(data_file)
-        return df
+        if label is None:
+            return df
+        else:
+            out_label = f"_{ticker}_{date_start}_{date_end}"
+            return df, out_label
 
 
 class FeaturesPrice:
@@ -85,9 +89,12 @@ class FeaturesPrice:
         self.ta_strategy= dict()
         self.get_features(**features)
         if len(self.ta_strategy) > 0:
-            self.ta = self.build_ta(self.ta_strategy)
-            self.my_strategy = ta.Strategy(name="", ta= self.ta)
+            self.ta, self.whole_ta = self.build_ta(self.ta_strategy)
+            self.my_strategy = ta.Strategy(name=strategy_name, ta= self.ta)
             self.df.ta.strategy(self.my_strategy)
+            if len(self.whole_ta) > 0:
+                for wtai in self.whole_ta:
+                    self.df.ta.strategy(wtai)
         #self.drop_nonfeatures()
         #self.drop_nans()
 
@@ -113,6 +120,7 @@ class FeaturesPrice:
     @staticmethod
     def build_ta(ta_dict):
         ta = []
+        whole_ta = []
         for k, v in ta_dict.items():
             if isinstance(v, int):
                 item = dict(kind=k, length=v)
@@ -122,11 +130,19 @@ class FeaturesPrice:
                     item = dict(kind=k, length=i)
                     ta.append(item)
             elif isinstance(v, dict):
-                item = dict(kind=k, **v)
-                ta.append(item)
+                if "length" in v.keys() and isinstance(v['length'], list):
+                    lengths = v.pop("length")
+                    for li in lengths:
+                        item = dict(kind=k, length=li, **v)
+                        ta.append(item)                    
+                else:
+                    item = dict(kind=k, **v)
+                    ta.append(item)
+            elif isinstance(v, str) and v == "whole":
+                whole_ta.append(k)
             else:
                 raise ValueError('Invalid ta entry')
-        return ta
+        return ta, whole_ta
             
     def drop_nans(self):
         """Drop NaN values in the dataframe."""

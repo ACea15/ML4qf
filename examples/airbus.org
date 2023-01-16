@@ -16,6 +16,7 @@
 s
 #+begin_src python  :session py1 :results none
   import sys
+  import pathlib
   file_path = sys.path[1]
   sys.path.append(file_path + "/../")
 #+end_src
@@ -24,6 +25,7 @@ s
 #+BEGIN_SRC python :session py1 :results output silent
 
   import numpy as np
+  import pathlib
   import yfinance as yf
   import ml4qf
   import ml4qf.utils
@@ -46,79 +48,107 @@ s
   import ml4qf.inputs
   import ml4qf.collectors.financial_features
   import ml4qf.transformers
+  import ml4qf.predictors.model_som
 #+END_SRC
 
 * Introduction
 #+begin_src python :session py1 :results none 
-df = yf.download("EADSY", start="2014-10-02", end="2019-10-1", interval='1d')
+df2 = yf.download("EADSY", start="2014-10-02", end="2019-10-1", interval='1d')
 #df.index
 #+end_src
 
 
 * Feature engineering
 
-#+begin_src python :session py1
+#+begin_src python :session py1 :results none 
 FEATURES1 = {'momentum_': [1, 2, 5, 8, 15, 23],
             'OC_': None,
             'HL_': None,
-            'Ret_': [1,2],
-            'RetLog_': list(range(10, 90, 10)),
+            'Ret_': [1, 5, 30, 35],
+            #'RetLog_': list(range(10, 90, 10)),
             'Std_': list(range(10, 90, 10)),
             'MA_': [5, 10, 25, 50],
             'EMA_': [5, 10, 25, 50],
-            'sign_return_': [1, 2, 5, 8, 15, 23],
+            'sign_return_': list(range(1,10)),
             'volume_':None,
-            "percent_return": dict(length=2, append=False),
-            "log_return": [1, 2]
+            "ema": {"close": "volume", "length": [5, 10, 20], "prefix": "VOLUME"},
+            "log_return": {"length": [1, 20], "cumulative": True},
+            "ohlc4":{},
+            "volatility":"whole"
+            #"momentum":"whole"
+            #"percent_return": dict(length=2, append=False),
+            #"log_return": [1, 2]
             }
 
 data = ml4qf.collectors.financial_features.FinancialData("EADSY", 2019, 10, 1, 365*5, FEATURES1)
+img_dir = "./img/" + data.label
+pathlib.Path(img_dir).mkdir(parents=True, exist_ok=True)
+df_  = data.features.df.drop(data.df.columns, axis=1)
+df_.dropna(inplace=True)
 
 #+end_src
 
-#+RESULTS:
 
+#+begin_src python :session py1 :results output
+own_features = list(df_.columns[:df_.columns.get_loc('volume_')+1])
+pa_features = list(df_.columns[df_.columns.get_loc('volume_') + 1:df_.columns.get_loc('OHLC4')+1])
+pa_volfeatures = list(df_.columns[df_.columns.get_loc('OHLC4')+1:])
+total_features = len(own_features) + len(pa_features) + len(pa_volfeatures)
+print("######################")
+print(own_features)
+print("######################")
+print(pa_features)
+print("######################")
+print(pa_volfeatures)
+print("######################")
+assert total_features == len(df_.columns), "Number of features not matching in dataframe"
+#+end_src
+
+#+RESULTS:
+: ######################
+: ['momentum_1d', 'momentum_2d', 'momentum_5d', 'momentum_8d', 'momentum_15d', 'momentum_23d', 'OC_', 'HL_', 'Ret_1d', 'Ret_5d', 'Ret_30d', 'Ret_35d', 'Std_10d', 'Std_20d', 'Std_30d', 'Std_40d', 'Std_50d', 'Std_60d', 'Std_70d', 'Std_80d', 'MA_5d', 'MA_10d', 'MA_25d', 'MA_50d', 'EMA_5d', 'EMA_10d', 'EMA_25d', 'EMA_50d', 'sign_return_1d', 'sign_return_2d', 'sign_return_3d', 'sign_return_4d', 'sign_return_5d', 'sign_return_6d', 'sign_return_7d', 'sign_return_8d', 'sign_return_9d', 'volume_']
+: ######################
+: ['VOLUME_EMA_5', 'VOLUME_EMA_10', 'VOLUME_EMA_20', 'CUMLOGRET_1', 'CUMLOGRET_20', 'OHLC4']
+: ######################
+: ['ABER_ZG_5_15', 'ABER_SG_5_15', 'ABER_XG_5_15', 'ABER_ATR_5_15', 'ACCBL_20', 'ACCBM_20', 'ACCBU_20', 'ATRr_14', 'BBL_5_2.0', 'BBM_5_2.0', 'BBU_5_2.0', 'BBB_5_2.0', 'BBP_5_2.0', 'DCL_20_20', 'DCM_20_20', 'DCU_20_20', 'HWM', 'HWU', 'HWL', 'KCLe_20_2', 'KCBe_20_2', 'KCUe_20_2', 'MASSI_9_25', 'NATR_14', 'PDIST', 'RVI_14', 'THERMO_20_2_0.5', 'THERMOma_20_2_0.5', 'THERMOl_20_2_0.5', 'THERMOs_20_2_0.5', 'TRUERANGE_1', 'UI_14']
+: ######################
 
 ** Exploratory data analysis
 
 
 #+begin_src python :session py1 :results file
-fig1_path= './img/stock_Close.png'
+fig1_path= img_dir +'/stock_Close.png'
 fig1 = px.line(df_, y=['momentum_1d', 'momentum_5d', 'momentum_15d'])
 fig1.write_image(fig1_path)
 fig1_path
 #+end_src
 
 #+RESULTS:
-[[file:./img/stock_Close.png]]
+[[file:./img/_EADSY_2014-10-02_2019-10-01/stock_Close.png]]
 
+*** Correlation
+
+#+begin_src python :session py1 :results file
+fig1_path= img_dir +'/correlation.png'
+df_corr = df_.corr().round(2)
+fig1 = px.imshow(np.abs(df_corr))
+fig1.layout.height = 600
+fig1.layout.width = 600
+fig1.write_image(fig1_path)
+fig1_path
+#+end_src
+
+#+RESULTS:
+[[file:./img/_EADSY_2014-10-02_2019-10-01/correlation.png]]
 
 ** Label 
 
 *** Class imbalance
 
 #+begin_src python :session py1
-  def fix_imbalance(x, *args):
-      #print(args)
-      #print(args.df['returns'].shift(-1))
-      bins = np.where(args[0].df.loc[args[1]]['returns'].shift(-1) > x, 1, 0)
-      len_bins = len(bins) 
-      len1 = sum(bins)
-      len0 =  len_bins - len1
-      return ((len1 - len0) / len_bins)
-
-  #ymin = scipy.optimize.minimize(fix_imbalance, 0.00068, data)
-  #ymin = scipy.optimize.newton(fix_imbalance, 0.000, args=(data,))
-#+end_src
-
-#+RESULTS:
-
-#+begin_src python :session py1
-  df_  = data.features.df.drop(data.df.columns, axis=1)
-  df_.dropna(inplace=True)
-  ymin = scipy.optimize.bisect(fix_imbalance, -0.01, 0.01, args=(data, df_.index))
-  df_['target'] = np.where(data.df.loc[df_.index]['returns'].shift(-1) > ymin, 1, 0)
-  df_.target.value_counts()
+ymin = scipy.optimize.bisect(ml4qf.utils.fix_imbalance, -0.01, 0.01, args=(data, df_.index))
+df_['target'] = np.where(data.df.loc[df_.index]['returns'].shift(-1) > ymin, 1, 0)
+df_.target.value_counts()
 #+end_src
 
 #+RESULTS:
@@ -128,121 +158,150 @@ fig1_path
 
 ** Feature scaling
 
-#+begin_src python :session py1
-np.abs(scipy.stats.zscore(df_)).max()
+https://towardsdatascience.com/scale-standardize-or-normalize-with-scikit-learn-6ccc7d176a02
+
+
+#+begin_src python :session py1 :results output 
+zscores = np.abs(scipy.stats.zscore(df_)).max()
+print(zscores)
 #+end_src
 
 #+RESULTS:
 #+begin_example
-momentum_1d         7.405875
-momentum_2d         6.255884
-momentum_5d         5.205477
-momentum_8d         4.774641
-momentum_15d        3.323660
-momentum_23d        3.477268
-OC_                 5.166176
-HL_                14.712396
-Ret_1d              6.518964
-Ret_2d              5.631053
-RetLog_10d          3.719721
-RetLog_20d          3.213870
-RetLog_30d          3.490527
-RetLog_40d          3.254908
-RetLog_50d          3.165038
-RetLog_60d          3.294189
-RetLog_70d          3.076192
-RetLog_80d          3.314533
-Std_10d             5.232700
-Std_20d             4.027321
-Std_30d             3.280614
-Std_40d             2.726653
-Std_50d             2.411506
-Std_60d             2.149318
-Std_70d             2.178102
-Std_80d             2.123903
-MA_5d               2.106170
-MA_10d              2.084862
-MA_25d              2.001722
-MA_50d              1.974645
-EMA_5d              2.046045
-EMA_10d             2.013283
-EMA_25d             1.959804
-EMA_50d             1.954027
-sign_return_1d      1.760979
-sign_return_2d      1.819713
-sign_return_5d      1.785669
-sign_return_8d      1.721326
-sign_return_15d     1.694612
-sign_return_23d     1.709776
-volume_            12.346371
-PCTRET_2            5.631053
-LOGRET_1            6.888361
-LOGRET_2            6.028731
-dtype: float64
+momentum_1d          7.405875
+momentum_2d          6.255884
+momentum_5d          5.205477
+momentum_8d          4.774641
+momentum_15d         3.323660
+                       ...   
+THERMOma_20_2_0.5    4.659793
+THERMOl_20_2_0.5     3.212057
+THERMOs_20_2_0.5     1.721326
+TRUERANGE_1          9.057901
+UI_14                3.888160
+Length: 76, dtype: float64
 #+end_example
-
-
-#+begin_src python :session py1
-
-  transformers = {'MinMaxScaler': {'features': ['momentum']},
-                  'StandardScaler': {'features': ['EMA', 'MA', 'Std']},
-                  'RobustScaler': {'features': ['volume', 'HL']}
-                  }
-
-  columns = ml4qf.transformers.build_transformation(df_, transformers)
-  ct = sklearn.compose.ColumnTransformer(columns, remainder='passthrough')
-#+end_src
 
 #+RESULTS:
 
+#+begin_src python :session py1 :results none
+  
+transformers = {'MinMaxScaler': {'features': ['sign_return']},
+'StandardScaler_1': {'features': ['EMA', 'MA', 'Std', 'Ret', 'OC']},
+'RobustScaler': {'features': ['momentum', 'volume', 'HL']},
+'StandardScaler_2': {'features': pa_volfeatures},
+'StandardScaler_3': {'features': pa_features}
+}
+
+columns = ml4qf.transformers.build_transformation(df_, transformers)
+columns_validation = ml4qf.transformers.build_transformation(df_, transformers)
+ct = sklearn.compose.ColumnTransformer(columns, remainder='passthrough')
+#ct_validation = sklearn.compose.ColumnTransformer(columns, remainder='passthrough')
+
+#+end_src
+
 *** Split data
-#+begin_src python :session py1
+#+begin_src python :session py1 :results output
   Xtrain, Xtest = train_test_split(df_.to_numpy(), train_size=0.8, shuffle=False)
   len_train = len(Xtrain)
   len_test = len(Xtest)
   df_train = df_.iloc[:len_train, :]
   df_test = df_.iloc[len_train:, :]
   Xtrain_scaled = ct.fit_transform(df_train)
+  Xtrain_scaled = ml4qf.transformers.swap_features(Xtrain_scaled, df_train, ct)
+  Xtest_scaled = ct.transform(df_test)
+  Xtest_scaled = ml4qf.transformers.swap_features(Xtest_scaled, df_test, ct)
+  df_train_scaled = ml4qf.transformers.scale_df(df_train, columns_validation)
+  assert (Xtrain_scaled == df_train_scaled.to_numpy()).all(), "scaling failed"
   #Xtrain_scaled = ct.transform(Xtrain)
 
 #+end_src
 
 #+RESULTS:
-#+begin_example
-Date
-2015-01-28    1
-2015-01-29    0
-2015-01-30    1
-2015-02-02    1
-2015-02-03    0
-             ..
-2019-09-24    1
-2019-09-25    0
-2019-09-26    0
-2019-09-27    1
-2019-09-30    0
-Name: target, Length: 1177, dtype: int64
-#+end_example
 
 ** SOM
 
 #+begin_src python :session py1
   ########
+  # def set_seeds(seed=42): 
+  #     random.seed(seed)
+  #     np.random.seed(seed)
+  #     tf.random.set_seed(seed)
 
+  ml4qf.utils.set_seeds(['np.random'])
+  som_size = 50
+  som_num_features = Xtrain_scaled.shape[1]
+  som_model = minisom.MiniSom(som_size, som_size, som_num_features, sigma=1.5, learning_rate=0.1, 
+  neighborhood_function='gaussian', random_seed=42)
+  # x, y, input_len, sigma=1.0, learning_rate=0.5,
+  #                  decay_function=asymptotic_decay,
+  #                  neighborhood_function='gaussian', topology='rectangular',
+  #                  activation_distance='euclidean', random_seed=None)
+  som_model.pca_weights_init(Xtrain_scaled)
+  som_model.train(Xtrain_scaled, 10000, verbose=True)
 
-  som_model = minisom.MiniSom(7, 7, 4, sigma=3, learning_rate=0.5, 
-                neighborhood_function='triangle', random_seed=10)
-  som.pca_weights_init(Xtrain_scaled)
-  som.train(Xtrain_scaled, 500, verbose=True)
+  W = som_model.get_weights()
+  som_labels0, target_name = ml4qf.predictors.model_som.Model.feature_selection(W, labels=df_.columns, target_index = -1, a = 0.08)
 
-  W = som.get_weights()
-  som_labels, target_name = model_som.som_feature_selection(W, labels=df_.columns + ['target'], target_index = -1, a = 0.04)
-
-  assert target_name = 'target', "targets do not coincide after som" 
-  dftrain_reduced = df_train[som_labels]
-  dftest_reduced = df_test[som_labels]
-  
+  #assert target_name = 'target', "targets do not coincide after som" 
+  #dftrain_reduced = df_train[som_labels]
+  #dftest_reduced = df_test[som_labels]
+  som_labels0
 #+end_src
+
+#+RESULTS:
+| ABER_ZG_5_15 | HL_ | sign_return_7d | momentum_2d | UI_14 | VOLUME_EMA_5 |
+
+#+begin_src python :session py1 :results output
+import ml4qf.predictors.model_som
+som_size = 50
+som_obj = ml4qf.predictors.model_som.Model(som_size, som_size, Xtrain_scaled, sigma=1.5, learning_rate=0.1, 
+neighborhood_function='gaussian', num_iter=10000, random_seed=42)
+som_labels = som_obj.iterate_som_selection(min_num_features=30, labels=list(df_train.columns), a_range=[0.01, 0.03, 0.05, 0.08, 0.1, 0.2], num_iterations=30)
+print(som_labels)
+#+end_src
+
+#+RESULTS:
+: Total number of iterations: 15
+: ['Std_40d', 'sign_return_3d', 'sign_return_6d', 'sign_return_5d', 'momentum_23d', 'Std_10d', 'PDIST', 'VOLUME_EMA_5', 'TRUERANGE_1', 'EMA_10d', 'sign_return_9d', 'MASSI_9_25', 'UI_14', 'sign_return_8d', 'EMA_50d', 'ATRr_14', 'KCBe_20_2', 'OC_', 'VOLUME_EMA_10', 'DCU_20_20', 'HL_', 'EMA_5d', 'sign_return_7d', 'momentum_5d', 'momentum_1d', 'THERMOma_20_2_0.5', 'volume_', 'Ret_30d', 'ABER_ATR_5_15', 'Ret_1d', 'Ret_5d']
+
+
+#+begin_src python :session py1 :results file
+  # for i, f in enumerate(feature_names):
+  #     plt.subplot(3, 3, i+1)
+  #     plt.title(f)
+  #     plt.pcolor(W[:,:,i].T, cmap='coolwarm')
+  #     plt.xticks(np.arange(size+1))
+  #     plt.yticks(np.arange(size+1))
+  # plt.tight_layout()
+  # plt.show()
+  #+begin_src python :session py1 :results file
+  fig1_path= img_dir +'/som.png'
+  fig1 = px.imshow(W[:,:,0].T)
+  fig1.layout.height = 600
+  fig1.layout.width = 600
+  fig1.write_image(fig1_path)
+  fig1_path
+#+end_src
+
+#+RESULTS:
+[[file:./img/_EADSY_2014-10-02_2019-10-01/som.png]]
+
+#+end_src
+
+*** Reduced model
+
+#+begin_src python :session py1 :results output
+index_reducedlabels = [df_train.columns.get_loc(i) for i in som_labels]
+dftrain_reduced = df_train[som_labels]
+dftest_reduced = df_test[som_labels]
+assert (dftrain_reduced.to_numpy() == Xtrain[:, index_reducedlabels]).all(), "Reduced matrix not maching dimensions"
+Xtrain_reduced = Xtrain_scaled[:, index_reducedlabels]
+Xtest_reduced = Xtest_scaled[:, index_reducedlabels]
+#Xtest_reduced = Xtest_scaled[:, index_reducedlabels]
+#+end_src
+
+#+RESULTS:
 
 * Base line model
 
