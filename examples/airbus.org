@@ -13,7 +13,7 @@
 (pyvenv-workon "qfpy")
 (require 'org-tempo)
 #+end_src
-s
+
 #+begin_src python  :session py1 :results none
   import sys
   import pathlib
@@ -57,51 +57,50 @@ df2 = yf.download("EADSY", start="2014-10-02", end="2019-10-1", interval='1d')
 #df.index
 #+end_src
 
-
 * Feature engineering
 
 #+begin_src python :session py1 :results none 
-FEATURES1 = {'momentum_': [1, 2, 5, 8, 15, 23],
-            'OC_': None,
-            'HL_': None,
-            'Ret_': [1, 5, 30, 35],
-            #'RetLog_': list(range(10, 90, 10)),
-            'Std_': list(range(10, 90, 10)),
-            'MA_': [5, 10, 25, 50],
-            'EMA_': [5, 10, 25, 50],
-            'sign_return_': list(range(1,10)),
-            'volume_':None,
-            "ema": {"close": "volume", "length": [5, 10, 20], "prefix": "VOLUME"},
-            "log_return": {"length": [1, 20], "cumulative": True},
-            "ohlc4":{},
-            "volatility":"whole"
-            #"momentum":"whole"
-            #"percent_return": dict(length=2, append=False),
-            #"log_return": [1, 2]
-            }
+  FEATURES1 = {'momentum_': [1, 2, 5, 8, 15, 23],
+               'OC_': None,
+               'HL_': None,
+               'Ret_': [1, 5, 30, 35],
+               #'RetLog_': list(range(10, 90, 10)),
+               'Std_': list(range(10, 90, 10)),
+               'MA_': [5, 10, 25, 50],
+               'EMA_': [5, 10, 25, 50],
+               'sign_return_': list(range(1,10)),
+               'volume_':None,
+               "ema": {"close": "volume", "length": [5, 10, 20], "prefix": "VOLUME"},
+               "log_return": {"length": [1, 20], "cumulative": True},
+               "ohlc4":{},
+               "volatility":"whole"
+               #"momentum":"whole"
+               #"percent_return": dict(length=2, append=False),
+               #"log_return": [1, 2]
+               }
 
-data = ml4qf.collectors.financial_features.FinancialData("EADSY", 2019, 10, 1, 365*5, FEATURES1)
-img_dir = "./img/" + data.label
-pathlib.Path(img_dir).mkdir(parents=True, exist_ok=True)
-df_  = data.features.df.drop(data.df.columns, axis=1)
-df_.dropna(inplace=True)
+  data = ml4qf.collectors.financial_features.FinancialData("EADSY", 2019, 10, 1, 365*5, FEATURES1)
+  img_dir = "./img/" + data.label
+  pathlib.Path(img_dir).mkdir(parents=True, exist_ok=True)
+  df_  = data.features.df.drop(data.df.columns, axis=1)
+  df_.dropna(inplace=True)
 
 #+end_src
 
 
 #+begin_src python :session py1 :results output
-own_features = list(df_.columns[:df_.columns.get_loc('volume_')+1])
-pa_features = list(df_.columns[df_.columns.get_loc('volume_') + 1:df_.columns.get_loc('OHLC4')+1])
-pa_volfeatures = list(df_.columns[df_.columns.get_loc('OHLC4')+1:])
-total_features = len(own_features) + len(pa_features) + len(pa_volfeatures)
-print("######################")
-print(own_features)
-print("######################")
-print(pa_features)
-print("######################")
-print(pa_volfeatures)
-print("######################")
-assert total_features == len(df_.columns), "Number of features not matching in dataframe"
+  own_features = list(df_.columns[:df_.columns.get_loc('volume_')+1])
+  pa_features = list(df_.columns[df_.columns.get_loc('volume_') + 1:df_.columns.get_loc('OHLC4')+1])
+  pa_volfeatures = list(df_.columns[df_.columns.get_loc('OHLC4')+1:])
+  total_features = len(own_features) + len(pa_features) + len(pa_volfeatures)
+  print("######################")
+  print(own_features)
+  print("######################")
+  print(pa_features)
+  print("######################")
+  print(pa_volfeatures)
+  print("######################")
+  assert total_features == len(df_.columns), "Number of features not matching in dataframe"
 #+end_src
 
 #+RESULTS:
@@ -117,10 +116,10 @@ assert total_features == len(df_.columns), "Number of features not matching in d
 
 
 #+begin_src python :session py1 :results file
-fig1_path= img_dir +'/stock_Close.png'
-fig1 = px.line(df_, y=['momentum_1d', 'momentum_5d', 'momentum_15d'])
-fig1.write_image(fig1_path)
-fig1_path
+  fig1_path= img_dir +'/stock_Close.png'
+  fig1 = px.line(df_, y=['momentum_1d', 'momentum_5d', 'momentum_15d'])
+  fig1.write_image(fig1_path)
+  fig1_path
 #+end_src
 
 #+RESULTS:
@@ -129,13 +128,13 @@ fig1_path
 *** Correlation
 
 #+begin_src python :session py1 :results file
-fig1_path= img_dir +'/correlation.png'
-df_corr = df_.corr().round(2)
-fig1 = px.imshow(np.abs(df_corr))
-fig1.layout.height = 600
-fig1.layout.width = 600
-fig1.write_image(fig1_path)
-fig1_path
+  fig1_path= img_dir +'/correlation.png'
+  df_corr = df_.corr().round(2)
+  fig1 = px.imshow(np.abs(df_corr))
+  fig1.layout.height = 600
+  fig1.layout.width = 600
+  fig1.write_image(fig1_path)
+  fig1_path
 #+end_src
 
 #+RESULTS:
@@ -168,21 +167,20 @@ print(zscores)
 
 #+RESULTS:
 #+begin_example
-momentum_1d          7.405875
-momentum_2d          6.255884
-momentum_5d          5.205477
-momentum_8d          4.774641
-momentum_15d         3.323660
-                       ...   
-THERMOma_20_2_0.5    4.659793
-THERMOl_20_2_0.5     3.212057
-THERMOs_20_2_0.5     1.721326
-TRUERANGE_1          9.057901
-UI_14                3.888160
-Length: 76, dtype: float64
+momentum_1d         7.405875
+momentum_2d         6.255884
+momentum_5d         5.205477
+momentum_8d         4.774641
+momentum_15d        3.323660
+                      ...   
+THERMOl_20_2_0.5    3.212057
+THERMOs_20_2_0.5    1.721326
+TRUERANGE_1         9.057901
+UI_14               3.888160
+target              1.000850
+Length: 77, dtype: float64
 #+end_example
 
-#+RESULTS:
 
 #+begin_src python :session py1 :results none
   
@@ -262,8 +260,8 @@ print(som_labels)
 #+end_src
 
 #+RESULTS:
-: Total number of iterations: 15
-: ['Std_40d', 'sign_return_3d', 'sign_return_6d', 'sign_return_5d', 'momentum_23d', 'Std_10d', 'PDIST', 'VOLUME_EMA_5', 'TRUERANGE_1', 'EMA_10d', 'sign_return_9d', 'MASSI_9_25', 'UI_14', 'sign_return_8d', 'EMA_50d', 'ATRr_14', 'KCBe_20_2', 'OC_', 'VOLUME_EMA_10', 'DCU_20_20', 'HL_', 'EMA_5d', 'sign_return_7d', 'momentum_5d', 'momentum_1d', 'THERMOma_20_2_0.5', 'volume_', 'Ret_30d', 'ABER_ATR_5_15', 'Ret_1d', 'Ret_5d']
+: Total number of iterations: 9
+: ['Ret_5d', 'sign_return_7d', 'OC_', 'ABER_XG_5_15', 'VOLUME_EMA_5', 'momentum_15d', 'sign_return_6d', 'BBP_5_2.0', 'KCLe_20_2', 'OHLC4', 'sign_return_2d', 'ABER_ATR_5_15', 'VOLUME_EMA_10', 'THERMOl_20_2_0.5', 'TRUERANGE_1', 'momentum_8d', 'momentum_5d', 'UI_14', 'Ret_1d', 'Std_20d', 'momentum_23d', 'MASSI_9_25', 'Std_30d', 'momentum_2d', 'sign_return_5d', 'ATRr_14', 'HL_', 'EMA_5d', 'THERMOma_20_2_0.5', 'sign_return_3d', 'PDIST', 'volume_']
 
 
 #+begin_src python :session py1 :results file
@@ -292,13 +290,13 @@ print(som_labels)
 *** Reduced model
 
 #+begin_src python :session py1 :results output
-index_reducedlabels = [df_train.columns.get_loc(i) for i in som_labels]
-dftrain_reduced = df_train[som_labels]
-dftest_reduced = df_test[som_labels]
-assert (dftrain_reduced.to_numpy() == Xtrain[:, index_reducedlabels]).all(), "Reduced matrix not maching dimensions"
-Xtrain_reduced = Xtrain_scaled[:, index_reducedlabels]
-Xtest_reduced = Xtest_scaled[:, index_reducedlabels]
-#Xtest_reduced = Xtest_scaled[:, index_reducedlabels]
+  index_reducedlabels = [df_train.columns.get_loc(i) for i in som_labels]
+  dftrain_reduced = df_train[som_labels]
+  dftest_reduced = df_test[som_labels]
+  assert (dftrain_reduced.to_numpy() == Xtrain[:, index_reducedlabels]).all(), "Reduced matrix not maching dimensions"
+  Xtrain_reduced = Xtrain_scaled[:, index_reducedlabels]
+  Xtest_reduced = Xtest_scaled[:, index_reducedlabels]
+  #Xtest_reduced = Xtest_scaled[:, index_reducedlabels]
 #+end_src
 
 #+RESULTS:
@@ -307,27 +305,31 @@ Xtest_reduced = Xtest_scaled[:, index_reducedlabels]
 
 #+begin_src python :session py1
   import ml4qf.predictors.model_keras as model_keras
-  X = df_reduced.to_numpy()
   y = df_train['target'].to_numpy()
   layers_dict = dict()
   layers_dict['LSTM'] = dict(units=5, activation = 'relu', return_sequences=False, name='LSTM')
   layers_dict['Dense'] = dict(units=1, name='Output')
   layers_tuple = ml4qf.utils.dict2tuple(layers_dict)
-  base_model = model_keras.Model(keras_model='Sequential', layers=layers_tuple,
+  base_model = model_keras.Model(keras_model='Sequential', layers=layers_tuple, seqlen=10
                                  optimizer_name='adam', loss_name='binary_crossentropy', metrics=None,
                                  optimizer_sett=None, compile_sett=None, loss_sett=None)
-  base_model.fit(X, y)
+  base_model.fit(Xtrain_reduced, y)
 
 #+end_src
+
+#+RESULTS:
+
 
 ** Classification
 
 #+begin_src python :session py1
-  X_test = ct.transform(dftest_reduced) ##?
   y_test = df_test.target.to_numpy()
-  ypred_basemodel = basemodel.predict(X_test)
+  ypred_basemodel = base_model.predict(X_test_reduced)
   sklearn.metrics.classification_report(y_test, ypred_basemodel)
 #+end_src
+
+#+RESULTS:
+| 236 | 32 |
 
 #+begin_src python  :session py_lstm :results none
 # summary
@@ -383,8 +385,8 @@ basemodel._model.summary()
 
 #+end_src
 
-
 * Implementation
 
 | Name | Description | Value |
 |      |             |       |
+

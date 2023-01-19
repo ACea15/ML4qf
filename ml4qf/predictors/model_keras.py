@@ -83,11 +83,10 @@ class Model(BaseEstimator):
         self.build()
         self.set_callbacks()
         if self.seqlen > 0:
-            self.X_generated, self.y_generated = tf_sequence.TimeseriesGenerator(X,
-                                                                                 y,
-                                                                                 length=self.seqlen)
+            self.X_generated = tf_sequence.TimeseriesGenerator(X,
+                                                               y,
+                                                               length=self.seqlen)
             self._fit_history = self._model.fit(self.X_generated,
-                                                self.y_generated,
                                                 callbacks=self._callbacks,
                                                 **kwargs
                                                 )
@@ -137,6 +136,8 @@ class Model(BaseEstimator):
             for i, li in enumerate(self.layers):
                 li_name = li[0]
                 li_dict = {x[0]:x[1] for x in li[1]}
+                if i == 0:
+                    li_dict['input_shape'] = (self.seqlen, self.n_features_in_)
                 layer_i = getattr(tf_layers, li_name)
                 self._model.add(layer_i(**li_dict))
 
@@ -209,9 +210,11 @@ class Model_binary(Model):
                          loss_name, metrics, optimizer_sett, compile_sett,
                          loss_sett, timeseries_sett)
         
-    def predict(self, X):
-        
-        y = self._model.predict(X)
+    def predict(self, X, y):
+        X_generated = tf_sequence.TimeseriesGenerator(X,
+                                                      y,
+                                                      length=self.seqlen)
+        y = self._model.predict(X_generated)
         ypred = np.round(y)[:, 0]
         return ypred
 
