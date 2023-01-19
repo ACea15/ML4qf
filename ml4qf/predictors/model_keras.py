@@ -83,13 +83,16 @@ class Model(BaseEstimator):
         self.build()
         self.set_callbacks()
         if self.seqlen > 0:
-            self.X_generated = tf_sequence.TimeseriesGenerator(X,
-                                                               y,
-                                                               length=self.seqlen)
-            self._fit_history = self._model.fit(self.X_generated,
+            # self.X_generated_ = tf_sequence.TimeseriesGenerator(X,
+            #                                                    y,
+            #                                                    length=self.seqlen)
+            self.X_generated_, self.y_generated_ = self.split_data(X, self.seqlen, y)
+            self._fit_history = self._model.fit(self.X_generated_,
+                                                self.y_generated_,
                                                 callbacks=self._callbacks,
                                                 **kwargs
                                                 )
+
         else:
             self._fit_history = self._model.fit(X,
                                                 y,
@@ -97,6 +100,26 @@ class Model(BaseEstimator):
                                                 **kwargs
                                                 )
         return self
+
+    @staticmethod
+    def split_data(X_in, n_steps, y_in=None):
+
+        X, y = list(), list()
+        for i in range(len(X_in)):
+            # find the end of this pattern
+            end_ix = i + n_steps
+            # check if we are beyond the dataset
+            if end_ix > len(X_in):
+                    break
+            # gather input and output parts of the pattern
+            seq_x = X_in[i:end_ix, :]
+            seq_y = y_in[end_ix-1]
+            X.append(seq_x)
+            y.append(seq_y)
+        if y_in is None:
+            return np.array(X)
+        else:
+            return np.array(X), np.array(y)
 
     # def predict(self, X: np.array, **kwargs):
 
@@ -134,7 +157,7 @@ class Model(BaseEstimator):
 
         else:
             for i, li in enumerate(self.layers):
-                li_name = li[0]
+                li_name = li[0].split("_")[0]
                 li_dict = {x[0]:x[1] for x in li[1]}
                 if i == 0:
                     li_dict['input_shape'] = (self.seqlen, self.n_features_in_)
@@ -210,12 +233,17 @@ class Model_binary(Model):
                          loss_name, metrics, optimizer_sett, compile_sett,
                          loss_sett, timeseries_sett)
         
-    def predict(self, X, y):
-        X_generated = tf_sequence.TimeseriesGenerator(X,
-                                                      y,
-                                                      length=self.seqlen)
-        y = self._model.predict(X_generated)
-        ypred = np.round(y)[:, 0]
+    def predict(self, X, y=None):
+        if y is None:
+            self.Xpred_generated_ = self.split_data(X, self.seqlen)
+        else:
+            self.Xpred_generated_, self.ypred_generated_ = self.split_data(X, self.seqlen, y)
+
+        # self.Xpred_generated_ = tf_sequence.TimeseriesGenerator(X,
+        #                                                         y,
+        #                                                         length=self.seqlen)
+        self.y_predicted_ = self._model.predict(self.Xpred_generated_)
+        ypred = np.where(self.y_predicted_ > 0.5, 1, 0)
         return ypred
 
 if (__name__ == '__main__'):

@@ -335,7 +335,7 @@ print(som_labels)
 # summary
 basemodel._model.summary()
 #+end_src
-* Cross validation
+* COMMENT Cross validation
 
 ** UMAP model
 
@@ -385,8 +385,9 @@ basemodel._model.summary()
 
 #+end_src
 
-* Implementation
+* COMMENT Implementation
 
 | Name | Description | Value |
 |      |             |       |
+
 
