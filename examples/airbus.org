@@ -36,10 +36,12 @@
   # matplotlib.rcParams['figure.dpi'] = 80
 
   import minisom
+  import umap
   from sklearn.model_selection import train_test_split
   import sklearn.metrics
   import scipy.optimize
   import sklearn.compose
+  import sklearn.pipeline
 
   import plotly.express as px
   import scipy.stats
@@ -49,6 +51,7 @@
   import ml4qf.collectors.financial_features
   import ml4qf.transformers
   import ml4qf.predictors.model_som
+  import ml4qf.predictors.model_keras as model_keras
 #+END_SRC
 
 * Introduction
@@ -304,7 +307,7 @@ print(som_labels)
 * Base line model
 
 #+begin_src python :session py1
-  import ml4qf.predictors.model_keras as model_keras
+
   y = df_train['target'].to_numpy()
   layers_dict = dict()
   layers_dict['LSTM'] = dict(units=5, activation = 'relu', return_sequences=False, name='LSTM')
@@ -335,57 +338,85 @@ print(som_labels)
 # summary
 basemodel._model.summary()
 #+end_src
-* COMMENT Cross validation
+* Cross validation
 
 ** UMAP model
 
-#+begin_src python :session py1
-  import umap
-  umap_model = umap.UMAP()
-#+end_src
 
 ** LSTM model
-
 
 
 ** Optimisation
 
 #+begin_src python :session py1
-
-  import sklearn.pipeline
-
-  pipe = sklearn.pipeline.Pipeline([('scaler', ct),
-                                    ('umap',umap_model),
-                                    ('lstm', base_model)])
+  umap_model = umap.UMAP()
+  lstm_model = model_keras.Model_binary()
+  pipe = sklearn.pipeline.Pipeline([('umap',umap_model),
+                                    ('lstm', lstm_model)])
   pipe.get_params()
-  
+
 #+end_src
 
-#+begin_src python :session py1
-  searcher_name = 'GridSearchCV'
+#+RESULTS:
+| memory | : | hline | steps | : | ((umap UMAP nil) (lstm Model_binary nil)) | verbose | : | False | umap | : | UMAP | nil | lstm | : | Model_binary | nil | umap__a | : | hline | umap__angular_rp_forest | : | False | umap__b | : | hline | umap__dens_frac | : | 0.3 | umap__dens_lambda | : | 2.0 | umap__dens_var_shift | : | 0.1 | umap__densmap | : | False | umap__disconnection_distance | : | hline | umap__force_approximation_algorithm | : | False | umap__init | : | spectral | umap__learning_rate | : | 1.0 | umap__local_connectivity | : | 1.0 | umap__low_memory | : | True | umap__metric | : | euclidean | umap__metric_kwds | : | hline | umap__min_dist | : | 0.1 | umap__n_components | : | 2 | umap__n_epochs | : | hline | umap__n_jobs | : | -1 | umap__n_neighbors | : | 15 | umap__negative_sample_rate | : | 5 | umap__output_dens | : | False | umap__output_metric | : | euclidean | umap__output_metric_kwds | : | hline | umap__precomputed_knn | : | (None None None) | umap__random_state | : | hline | umap__repulsion_strength | : | 1.0 | umap__set_op_mix_ratio | : | 1.0 | umap__spread | : | 1.0 | umap__target_metric | : | categorical | umap__target_metric_kwds | : | hline | umap__target_n_neighbors | : | -1 | umap__target_weight | : | 0.5 | umap__tqdm_kwds | : | hline | umap__transform_mode | : | embedding | umap__transform_queue_size | : | 4.0 | umap__transform_seed | : | 42 | umap__unique | : | False | umap__verbose | : | False | lstm__keras_model | : | Sequential | lstm__layers | : | nil | lstm__seqlen | : | 0 | lstm__optimizer_name | : | adam | lstm__optimizer_sett | : | hline | lstm__compile_sett | : | hline | lstm__loss_sett | : | hline | lstm__loss_name | : | binary_crossentropy | lstm__metrics | : | hline | lstm__timeseries_sett | : | hline |
+
+
+#+begin_src python :session py1 :results output
+  searcher_name = 'RandomSearchCV'
   layers_hyper = []
-  layers1_hyper = dict()
-  layers1_hyper['LSTM'] = dict(units=5, activation = 'relu', return_sequences=False, name='LSTM')
-  layers1_hyper['Dense'] = dict(units=1, name='Output')
-  layers1_hyper = ml4qf.utils.dict2tuple(layers_dict)
-  hyper_grid = {'umap':dict(n_neighbors=[5, 15, 30, 50, 100],
-                            n_components=[3, 8, 15, 30],
-                            min_dist=[0.05, 0.1, 0.4, 0.75],
-                            random_state=42),
-                'lstm':dict(seqlen=[10, 25, 50], )
+  ###########
+  layers_dict = dict()
+  layers_dict['LSTM_1'] = dict(units=100, activation = 'elu', name='LSTM1')
+  layers_dict['Dense_1'] = dict(units=1, activation='sigmoid', name='Output')
+  layers_tuple = ml4qf.utils.dict2tuple(layers_dict)
+  layers_hyper.append(layers_tuple)
+  #####################
+  layers_dict = dict()
+  layers_dict['LSTM_1'] = dict(units=50, activation = 'elu', return_sequences=True, name='LSTM1')
+  layers_dict['LSTM_2'] = dict(units=50, activation = 'elu', return_sequences=False, name='LSTM2')
+  layers_dict['Dense_1'] = dict(units=1, activation='sigmoid', name='Output')
+  layers_tuple = ml4qf.utils.dict2tuple(layers_dict)
+  layers_hyper.append(layers_tuple)
+  ############
+  layers_dict = dict()
+  layers_dict['LSTM_1'] = dict(units=50, activation = 'elu', return_sequences=True, name='LSTM1')
+  layers_dict['Dropout_1'] = dict(rate=0.3, name='Drouput1')
+  layers_dict['LSTM_2'] = dict(units=25, activation = 'elu', return_sequences=True, name='LSTM2')
+  layers_dict['Dropout_2'] = dict(rate=0.3, name='Drouput2')
+  layers_dict['LSTM_3'] = dict(units=25, activation = 'elu', return_sequences=False, name='LSTM3')
+  layers_dict['Dense_1'] = dict(units=1, activation='sigmoid', name='Output')
+  layers_tuple = ml4qf.utils.dict2tuple(layers_dict)
+  layers_hyper.append(layers_tuple)
+  #####################
+
+  ###########
+  hyper_grid = {#'umap':dict(n_neighbors=[5, 15, 30, 50, 100],
+                #            n_components=[3, 8, 15, 30],
+                #            min_dist=[0.05, 0.1, 0.4, 0.75],
+                #            random_state=42),
+                'umap':dict(n_neighbors=[30, 50],    
+                            n_components=[3, 2],         
+                            min_dist=[0.05, 0.2],     
+                            random_state=42),                    
+                'lstm':dict(seqlen=[10, 25],
+                            layers=layers_hyper,
+                            optimizer_name=[])
                 }
   searcher_settings = {'scoring':'f1',
+                       'n_iter':25,
                        'verbose': True}
   cv_name = 'TimeSeriesSplit'
   cv_settings = {'n_splits': 3}
-  _hypertuning1 = HyperTuning(pipe, searcher_name, searcher_settings,
-                             hyper_grid, cv_name, cv_settings)
-  hypertuning1 = _hypertuning1()
-  hypertuning1.fit(df_train.to_numpy())
+  #_hypertuning1 = HyperTuning(pipe, searcher_name, searcher_settings,
+  #                           hyper_grid, cv_name, cv_settings)
+  #hypertuning1 = _hypertuning1()
+  #hypertuning1.fit(df_train.to_numpy())
 
 #+end_src
 
-* COMMENT Implementation
+#+RESULTS:
+
+* Implementation
 
 | Name | Description | Value |
 |      |             |       |

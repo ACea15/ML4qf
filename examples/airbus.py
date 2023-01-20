@@ -49,8 +49,8 @@ FEATURES1 = {'momentum_': [1, 2, 5, 8, 15, 23],
              #"log_return": [1, 2]
              }
 
-#data = ml4qf.collectors.financial_features.FinancialData("EADSY", 2019, 10, 1, 365*25, FEATURES1)
-data = ml4qf.collectors.financial_features.FinancialData("SPY", 2019, 10, 1, 365*10, FEATURES1)
+data = ml4qf.collectors.financial_features.FinancialData("EADSY", 2019, 10, 1, 365*15, FEATURES1)
+#data = ml4qf.collectors.financial_features.FinancialData("SPY", 2019, 10, 1, 365*10, FEATURES1)
 img_dir = "./img/" + data.label
 pathlib.Path(img_dir).mkdir(parents=True, exist_ok=True)
 df_  = data.features.df.drop(data.df.columns, axis=1)
@@ -101,7 +101,7 @@ columns_validation = ml4qf.transformers.build_transformation(df_, transformers)
 ct = sklearn.compose.ColumnTransformer(columns, remainder='passthrough')
 #ct_validation = sklearn.compose.ColumnTransformer(columns, remainder='passthrough')
 
-Xtrain, Xtest = train_test_split(df_.to_numpy(), train_size=0.8, shuffle=False)
+Xtrain, Xtest = train_test_split(df_.to_numpy(), train_size=0.6, shuffle=False)
 len_train = len(Xtrain)
 len_test = len(Xtest)
 df_train = df_.iloc[:len_train, :]
@@ -187,25 +187,31 @@ layers_dict = dict()
 # layers_dict['Dense_1'] = dict(units=1, activation='sigmoid', name='Output')
 #####################
 ############
-layers_dict['LSTM_1'] = dict(units=100, activation = 'elu', return_sequences=True, name='LSTM1')
-layers_dict['LSTM_2'] = dict(units=100, activation = 'elu', return_sequences=False, name='LSTM2')
+# layers_dict['LSTM_1'] = dict(units=100, activation = 'elu', return_sequences=True, name='LSTM1')
+# layers_dict['LSTM_2'] = dict(units=100, activation = 'elu', return_sequences=False, name='LSTM2')
+# layers_dict['Dense_1'] = dict(units=1, activation='sigmoid', name='Output')
+#####################
+layers_dict['LSTM_1'] = dict(units=50, activation = 'elu', name='LSTM1')
 layers_dict['Dense_1'] = dict(units=1, activation='sigmoid', name='Output')
 #####################
 layers_tuple = ml4qf.utils.dict2tuple(layers_dict)
 #######################
 base_model = model_keras.Model_binary(keras_model='Sequential', layers=layers_tuple,
                                       seqlen=SEQ_LEN, optimizer_name='adam',
-                                      loss_name='binary_crossentropy', metrics=['accuracy','binary_accuracy', 'mse'],
+                                      loss_name='binary_crossentropy',
+                                      metrics=['accuracy','binary_accuracy', 'mse'],
                                       optimizer_sett=None, compile_sett=None, loss_sett=None)
 base_model.fit(Xtrain_reduced, y, epochs=70, shuffle=False, verbose=1)
 
 
 y_test  = df_test.target.to_numpy()
 ypred_basemodel = base_model.predict(Xtest_reduced, y_test)
-print(sklearn.metrics.classification_report(y_test[:-SEQ_LEN+1], ypred_basemodel.reshape(len(ypred_basemodel))))
+print(sklearn.metrics.classification_report(y_test[SEQ_LEN-1:],
+                                            ypred_basemodel.reshape(len(ypred_basemodel))))
  
 ypred_basemodeltrain = base_model.predict(Xtrain_reduced, y)
-print(sklearn.metrics.classification_report(y[:-SEQ_LEN+1], ypred_basemodeltrain.reshape(len(ypred_basemodeltrain))))
+print(sklearn.metrics.classification_report(y[SEQ_LEN-1:],
+                                            ypred_basemodeltrain.reshape(len(ypred_basemodeltrain))))
 
 # summary
 base_model._model.summary()
@@ -234,11 +240,13 @@ import tensorflow.keras.losses as tf_losses
 bc = tf_losses.BinaryCrossentropy()
 ypred_basemodel = base_model.predict(Xtest_reduced, y_test)
 #print(sklearn.metrics.classification_report(y_test[:-SEQ_LEN+1], ypred_basemodel.reshape(len(ypred_basemodel))))
-lost = bc(y_test[:-SEQ_LEN+1], base_model.y_predicted_.reshape(len(base_model.y_predicted_))).numpy()
+lost = bc(y_test[SEQ_LEN-1:], base_model.y_predicted_.reshape(len(base_model.y_predicted_))).numpy()
 
 m = tf_metrics.Accuracy()
 m.update_state([[1], [2], [3], [4]], [[0], [2], [3], [4]])
 m.result().numpy()
+
+
 
 
 # y_true = [[0., 1.], [0.2, 0.8],[0.3, 0.7],[0.4, 0.6]]
