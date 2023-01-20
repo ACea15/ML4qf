@@ -49,7 +49,8 @@ FEATURES1 = {'momentum_': [1, 2, 5, 8, 15, 23],
              #"log_return": [1, 2]
              }
 
-data = ml4qf.collectors.financial_features.FinancialData("EADSY", 2019, 10, 1, 365*10, FEATURES1)
+#data = ml4qf.collectors.financial_features.FinancialData("EADSY", 2019, 10, 1, 365*25, FEATURES1)
+data = ml4qf.collectors.financial_features.FinancialData("SPY", 2019, 10, 1, 365*10, FEATURES1)
 img_dir = "./img/" + data.label
 pathlib.Path(img_dir).mkdir(parents=True, exist_ok=True)
 df_  = data.features.df.drop(data.df.columns, axis=1)
@@ -171,7 +172,7 @@ Xtest_reduced = Xtest_scaled[:, index_reducedlabels]
 #Xtest_reduced = Xtest_scaled[:, index_reducedlabels]
 
 import ml4qf.predictors.model_keras as model_keras
-SEQ_LEN = 10
+SEQ_LEN = 30
 y = df_train['target'].to_numpy()
 layers_dict = dict()
 ############
@@ -196,15 +197,15 @@ base_model = model_keras.Model_binary(keras_model='Sequential', layers=layers_tu
                                       seqlen=SEQ_LEN, optimizer_name='adam',
                                       loss_name='binary_crossentropy', metrics=['accuracy','binary_accuracy', 'mse'],
                                       optimizer_sett=None, compile_sett=None, loss_sett=None)
-base_model.fit(Xtrain_reduced, y, epochs=50, shuffle=False, verbose=1)
+base_model.fit(Xtrain_reduced, y, epochs=70, shuffle=False, verbose=1)
 
 
 y_test  = df_test.target.to_numpy()
 ypred_basemodel = base_model.predict(Xtest_reduced, y_test)
-print(sklearn.metrics.classification_report(y_test[:-9], ypred_basemodel.reshape(len(ypred_basemodel))))
-
+print(sklearn.metrics.classification_report(y_test[:-SEQ_LEN+1], ypred_basemodel.reshape(len(ypred_basemodel))))
+ 
 ypred_basemodeltrain = base_model.predict(Xtrain_reduced, y)
-print(sklearn.metrics.classification_report(y[:-9], ypred_basemodeltrain.reshape(len(ypred_basemodeltrain))))
+print(sklearn.metrics.classification_report(y[:-SEQ_LEN+1], ypred_basemodeltrain.reshape(len(ypred_basemodeltrain))))
 
 # summary
 base_model._model.summary()
@@ -215,12 +216,13 @@ base_model._model.summary()
 import ml4qf.predictors.model_keras
 Xt1, yt1 = ml4qf.predictors.model_keras.Model.split_data(Xtest_reduced,SEQ_LEN ,y_test)
 # Test the model after training
+#yt1=np.zeros(len(yt1))
 test_results = base_model._model.evaluate(Xt1, yt1, verbose=1)
 print(f'Test results - Loss: {test_results[0]} - Accuracy: {test_results[1]*100}%')
 
 Xtr1, ytr1 = ml4qf.predictors.model_keras.Model.split_data(Xtrain_reduced,SEQ_LEN ,y)
 # Test the model after training
-test_results = base_model._model.evaluate(Xtr1, ytr1, verbose=1, batch_size=1)
+test_results = base_model._model.evaluate(Xtr1, ytr1, verbose=1, batch_size=3)
 print(f'Test results - Loss: {test_results[0]} - Accuracy: {test_results[1]*100}%')
 
 import tensorflow.keras.metrics as tf_metrics
@@ -228,10 +230,25 @@ m2 = tf_metrics.Accuracy()
 m2.update_state(base_model.y_predicted_, ytr1)
 m2.result().numpy()
 
+import tensorflow.keras.losses as tf_losses
+bc = tf_losses.BinaryCrossentropy()
+ypred_basemodel = base_model.predict(Xtest_reduced, y_test)
+#print(sklearn.metrics.classification_report(y_test[:-SEQ_LEN+1], ypred_basemodel.reshape(len(ypred_basemodel))))
+lost = bc(y_test[:-SEQ_LEN+1], base_model.y_predicted_.reshape(len(base_model.y_predicted_))).numpy()
 
 m = tf_metrics.Accuracy()
 m.update_state([[1], [2], [3], [4]], [[0], [2], [3], [4]])
 m.result().numpy()
+
+
+# y_true = [[0., 1.], [0.2, 0.8],[0.3, 0.7],[0.4, 0.6]]
+# y_pred = [[0.6, 0.4], [0.4, 0.6],[0.6, 0.4],[0.8, 0.2]]
+# bce = tf_losses.BinaryCrossentropy(reduction='sum_over_batch_size')
+# bce(y_true, y_pred).numpy()
+
+# bce = tf_losses.BinaryCrossentropy(reduction='sum')
+# bce(y_true, y_pred).numpy()
+
 # import tensorflow.keras.losses as tf_losses
 # bce = tf_losses.BinaryCrossentropy()
 
