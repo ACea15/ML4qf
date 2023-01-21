@@ -42,23 +42,22 @@
   import scipy.optimize
   import sklearn.compose
   import sklearn.pipeline
+  from scikeras.wrappers import KerasClassifier
 
   import plotly.express as px
   import scipy.stats
   import pandas as pd
   import pandas_ta as ta
   import ml4qf.inputs
+  import ml4qf.predictors.model_som
   import ml4qf.collectors.financial_features
   import ml4qf.transformers
   import ml4qf.predictors.model_som
   import ml4qf.predictors.model_keras as model_keras
+  import ml4qf.predictors.model_tuning
 #+END_SRC
 
 * Introduction
-#+begin_src python :session py1 :results none 
-df2 = yf.download("EADSY", start="2014-10-02", end="2019-10-1", interval='1d')
-#df.index
-#+end_src
 
 * Feature engineering
 
@@ -82,7 +81,7 @@ df2 = yf.download("EADSY", start="2014-10-02", end="2019-10-1", interval='1d')
                #"log_return": [1, 2]
                }
 
-  data = ml4qf.collectors.financial_features.FinancialData("EADSY", 2019, 10, 1, 365*5, FEATURES1)
+  data = ml4qf.collectors.financial_features.FinancialData("EADSY", 2019, 10, 1, 365*10, FEATURES1)
   img_dir = "./img/" + data.label
   pathlib.Path(img_dir).mkdir(parents=True, exist_ok=True)
   df_  = data.features.df.drop(data.df.columns, axis=1)
@@ -158,6 +157,7 @@ df_.target.value_counts()
 : 1    588
 : Name: target, dtype: int64
 
+
 ** Feature scaling
 
 https://towardsdatascience.com/scale-standardize-or-normalize-with-scikit-learn-6ccc7d176a02
@@ -222,39 +222,7 @@ ct = sklearn.compose.ColumnTransformer(columns, remainder='passthrough')
 
 ** SOM
 
-#+begin_src python :session py1
-  ########
-  # def set_seeds(seed=42): 
-  #     random.seed(seed)
-  #     np.random.seed(seed)
-  #     tf.random.set_seed(seed)
-
-  ml4qf.utils.set_seeds(['np.random'])
-  som_size = 50
-  som_num_features = Xtrain_scaled.shape[1]
-  som_model = minisom.MiniSom(som_size, som_size, som_num_features, sigma=1.5, learning_rate=0.1, 
-  neighborhood_function='gaussian', random_seed=42)
-  # x, y, input_len, sigma=1.0, learning_rate=0.5,
-  #                  decay_function=asymptotic_decay,
-  #                  neighborhood_function='gaussian', topology='rectangular',
-  #                  activation_distance='euclidean', random_seed=None)
-  som_model.pca_weights_init(Xtrain_scaled)
-  som_model.train(Xtrain_scaled, 10000, verbose=True)
-
-  W = som_model.get_weights()
-  som_labels0, target_name = ml4qf.predictors.model_som.Model.feature_selection(W, labels=df_.columns, target_index = -1, a = 0.08)
-
-  #assert target_name = 'target', "targets do not coincide after som" 
-  #dftrain_reduced = df_train[som_labels]
-  #dftest_reduced = df_test[som_labels]
-  som_labels0
-#+end_src
-
-#+RESULTS:
-| ABER_ZG_5_15 | HL_ | sign_return_7d | momentum_2d | UI_14 | VOLUME_EMA_5 |
-
 #+begin_src python :session py1 :results output
-import ml4qf.predictors.model_som
 som_size = 50
 som_obj = ml4qf.predictors.model_som.Model(som_size, som_size, Xtrain_scaled, sigma=1.5, learning_rate=0.1, 
 neighborhood_function='gaussian', num_iter=10000, random_seed=42)
@@ -263,26 +231,29 @@ print(som_labels)
 #+end_src
 
 #+RESULTS:
-: Total number of iterations: 9
-: ['Ret_5d', 'sign_return_7d', 'OC_', 'ABER_XG_5_15', 'VOLUME_EMA_5', 'momentum_15d', 'sign_return_6d', 'BBP_5_2.0', 'KCLe_20_2', 'OHLC4', 'sign_return_2d', 'ABER_ATR_5_15', 'VOLUME_EMA_10', 'THERMOl_20_2_0.5', 'TRUERANGE_1', 'momentum_8d', 'momentum_5d', 'UI_14', 'Ret_1d', 'Std_20d', 'momentum_23d', 'MASSI_9_25', 'Std_30d', 'momentum_2d', 'sign_return_5d', 'ATRr_14', 'HL_', 'EMA_5d', 'THERMOma_20_2_0.5', 'sign_return_3d', 'PDIST', 'volume_']
+: /home/acea/anaconda3/envs/qfpy/lib/python3.10/site-packages/minisom.py:379: ComplexWarning:
+: 
+: Casting complex values to real discards the imaginary part
+: 
+: Total number of iterations: 11
+: ['ATRr_14', 'Std_10d', 'BBB_5_2.0', 'TRUERANGE_1', 'THERMOs_20_2_0.5', 'Ret_1d', 'target', 'MA_25d', 'MA_50d', 'momentum_2d', 'sign_return_3d', 'sign_return_4d', 'sign_return_2d', 'OC_', 'sign_return_5d', 'Std_40d', 'Std_70d', 'Ret_5d', 'VOLUME_EMA_10', 'sign_return_7d', 'HL_', 'PDIST', 'MASSI_9_25', 'momentum_15d', 'THERMOl_20_2_0.5', 'UI_14', 'sign_return_8d', 'Ret_30d', 'BBU_5_2.0', 'volume_', 'DCL_20_20', 'momentum_1d', 'VOLUME_EMA_5', 'momentum_5d']
 
 
 #+begin_src python :session py1 :results file
-  # for i, f in enumerate(feature_names):
-  #     plt.subplot(3, 3, i+1)
-  #     plt.title(f)
-  #     plt.pcolor(W[:,:,i].T, cmap='coolwarm')
-  #     plt.xticks(np.arange(size+1))
-  #     plt.yticks(np.arange(size+1))
-  # plt.tight_layout()
-  # plt.show()
-  #+begin_src python :session py1 :results file
-  fig1_path= img_dir +'/som.png'
-  fig1 = px.imshow(W[:,:,0].T)
-  fig1.layout.height = 600
-  fig1.layout.width = 600
-  fig1.write_image(fig1_path)
-  fig1_path
+  # # for i, f in enumerate(feature_names):
+  # #     plt.subplot(3, 3, i+1)
+  # #     plt.title(f)
+  # #     plt.pcolor(W[:,:,i].T, cmap='coolwarm')
+  # #     plt.xticks(np.arange(size+1))
+  # #     plt.yticks(np.arange(size+1))
+  # # plt.tight_layout()
+  # # plt.show()
+  # fig1_path= img_dir +'/som.png'
+  # fig1 = px.imshow(W[:,:,0].T)
+  # fig1.layout.height = 600
+  # fig1.layout.width = 600
+  # fig1.write_image(fig1_path)
+  # fig1_path
 #+end_src
 
 #+RESULTS:
@@ -304,65 +275,146 @@ print(som_labels)
 
 #+RESULTS:
 
-* Base line model
-
+* LSTM design
 #+begin_src python :session py1
-
-  y = df_train['target'].to_numpy()
+  SEQ_LEN = 30
+  y_train = df_train['target'].to_numpy()
+#+end_src
+** Base line model
+#+begin_src python :session py1
   layers_dict = dict()
-  layers_dict['LSTM'] = dict(units=5, activation = 'relu', return_sequences=False, name='LSTM')
-  layers_dict['Dense'] = dict(units=1, name='Output')
+  ############
+  # layers_dict['LSTM'] = dict(units=5, activation = 'relu', return_sequences=False, name='LSTM')
+  # layers_dict['Dense'] = dict(units=1, name='Output')
+  ############
+  # layers_dict['LSTM_1'] = dict(units=100*2, activation = 'elu', return_sequences=True, name='LSTM1')
+  # layers_dict['Dropout_1'] = dict(rate=0.4, name='Drouput1')
+  # layers_dict['LSTM_2'] = dict(units=100, activation = 'elu', return_sequences=True, name='LSTM2')
+  # layers_dict['Dropout_2'] = dict(rate=0.4, name='Drouput2')
+  # layers_dict['LSTM_3'] = dict(units=100, activation = 'elu', return_sequences=False, name='LSTM3')
+  # layers_dict['Dense_1'] = dict(units=1, activation='sigmoid', name='Output')
+  #####################
+  ############
+  # layers_dict['LSTM_1'] = dict(units=100, activation = 'elu', return_sequences=True, name='LSTM1')
+  # layers_dict['LSTM_2'] = dict(units=100, activation = 'elu', return_sequences=False, name='LSTM2')
+  # layers_dict['Dense_1'] = dict(units=1, activation='sigmoid', name='Output')
+  #####################
+  layers_dict['LSTM_1'] = dict(units=50, activation = 'elu', name='LSTM1')
+  layers_dict['Dense_1'] = dict(units=1, activation='sigmoid', name='Output')
+  #####################
   layers_tuple = ml4qf.utils.dict2tuple(layers_dict)
-  base_model = model_keras.Model(keras_model='Sequential', layers=layers_tuple, seqlen=10
-                                 optimizer_name='adam', loss_name='binary_crossentropy', metrics=None,
-                                 optimizer_sett=None, compile_sett=None, loss_sett=None)
-  base_model.fit(Xtrain_reduced, y)
+  #######################
+  base_model = model_keras.Model_binary(keras_model='Sequential', layers=layers_tuple,
+                                        seqlen=SEQ_LEN, optimizer_name='adam',
+                                        loss_name='binary_crossentropy',
+                                        metrics=['accuracy','binary_accuracy', 'mse'],
+                                        optimizer_sett=None, compile_sett=None, loss_sett=None)
+  base_model.fit(Xtrain_reduced, y_train, epochs=70, shuffle=False, verbose=1)
+
+  # summary
+  base_model._model.summary()
 
 #+end_src
 
 #+RESULTS:
+: Model_binary(layers=(('LSTM_1',
+:                       (('units', 50), ('activation', 'elu'),
+:                        ('name', 'LSTM1'))),
+:                      ('Dense_1',
+:                       (('units', 1), ('activation', 'sigmoid'),
+:                        ('name', 'Output')))),
+:              metrics=['accuracy', 'binary_accuracy', 'mse'], seqlen=30)
 
+*** Classification
+#+begin_src python :session py1
+  y_test  = df_test.target.to_numpy()
+  ypred_basemodel = base_model.predict(Xtest_reduced, y_test).reshape(len(y_test[SEQ_LEN-1:]))
+  test_report = sklearn.metrics.classification_report(y_test[SEQ_LEN-1:], 
+                                                      ypred_basemodel, output_dict=True)
+  dftest_report = pd.DataFrame(test_report).transpose()
+  print(dftest_report)
 
-** Classification
+#+end_src
+
 
 #+begin_src python :session py1
-  y_test = df_test.target.to_numpy()
-  ypred_basemodel = base_model.predict(X_test_reduced)
-  sklearn.metrics.classification_report(y_test, ypred_basemodel)
+  ypred_basemodeltrain = base_model.predict(Xtrain_reduced, y_train).reshape(len(y_train[SEQ_LEN-1:]))
+  train_report = sklearn.metrics.classification_report(y_train[SEQ_LEN-1:],
+                                                       ypred_basemodeltrain, output_dict=True)
+  dftrain_report = pd.DataFrame(train_report).transpose()
+  print(dftrain_report)
+
 #+end_src
 
-#+RESULTS:
-| 236 | 32 |
-
-#+begin_src python  :session py_lstm :results none
-# summary
-basemodel._model.summary()
-#+end_src
 * Cross validation
 
-** UMAP model
+** UMAP and LSTM model
+#+begin_src python :session py1
+  umap_model = umap.UMAP(n_components=3)
+  layers_dict = dict()
+  #####################
+  layers_dict['LSTM_1'] = dict(units=50, activation = 'elu', name='LSTM1')
+  layers_dict['Dense_1'] = dict(units=1, activation='sigmoid', name='Output')
+  #####################
+  layers_tuple = ml4qf.utils.dict2tuple(layers_dict)
+  #######################
+  lstm_model = model_keras.Model_binary(keras_model='Sequential', layers=layers_tuple,
+                                        seqlen=SEQ_LEN, optimizer_name='adam',
+                                        loss_name='binary_crossentropy',
+                                        metrics=['accuracy','binary_accuracy', 'mse'],
+                                        optimizer_sett=None, compile_sett=None, loss_sett=None)
+
+  pipe = sklearn.pipeline.Pipeline([('umap', umap_model),
+                                    ('lstm', lstm_model)])
+
+  pipe.fit(Xtrain_reduced, y_train, lstm__epochs=70, lstm__shuffle=False)
+
+  # summary
+  
+#+end_src
+
+*** Classification
+#+begin_src python :session py1
+  y_test  = df_test.target.to_numpy()
+  ypred_basemodel = pipe.predict(Xtest_reduced)#.reshape(len(y_test[SEQ_LEN-1:]))
+  test_report = sklearn.metrics.classification_report(y_test[SEQ_LEN-1:], 
+                                                      ypred_basemodel, output_dict=True)
+  dftest_report = pd.DataFrame(test_report).transpose()
+  print(dftest_report)
+
+#+end_src
 
 
-** LSTM model
+#+begin_src python :session py1
+  ypred_basemodeltrain = pipe.predict(Xtrain_reduced)#.reshape(len(y_train[SEQ_LEN-1:]))
+  train_report = sklearn.metrics.classification_report(y_train[SEQ_LEN-1:],
+                                                       ypred_basemodeltrain, output_dict=True)
+  dftrain_report = pd.DataFrame(train_report).transpose()
+  print(dftrain_report)
 
+#+end_src
 
 ** Optimisation
 
 #+begin_src python :session py1
   umap_model = umap.UMAP()
-  lstm_model = model_keras.Model_binary()
-  pipe = sklearn.pipeline.Pipeline([('umap',umap_model),
+  lstm_model = model_keras.Model_binary(keras_model='Sequential',
+                                        seqlen=SEQ_LEN, optimizer_name='adam',
+                                        loss_name='binary_crossentropy',
+                                        metrics=['accuracy','binary_accuracy', 'mse'],
+                                        optimizer_sett=None, compile_sett=None, loss_sett=None)
+  pipe = sklearn.pipeline.Pipeline([
                                     ('lstm', lstm_model)])
   pipe.get_params()
 
 #+end_src
 
 #+RESULTS:
-| memory | : | hline | steps | : | ((umap UMAP nil) (lstm Model_binary nil)) | verbose | : | False | umap | : | UMAP | nil | lstm | : | Model_binary | nil | umap__a | : | hline | umap__angular_rp_forest | : | False | umap__b | : | hline | umap__dens_frac | : | 0.3 | umap__dens_lambda | : | 2.0 | umap__dens_var_shift | : | 0.1 | umap__densmap | : | False | umap__disconnection_distance | : | hline | umap__force_approximation_algorithm | : | False | umap__init | : | spectral | umap__learning_rate | : | 1.0 | umap__local_connectivity | : | 1.0 | umap__low_memory | : | True | umap__metric | : | euclidean | umap__metric_kwds | : | hline | umap__min_dist | : | 0.1 | umap__n_components | : | 2 | umap__n_epochs | : | hline | umap__n_jobs | : | -1 | umap__n_neighbors | : | 15 | umap__negative_sample_rate | : | 5 | umap__output_dens | : | False | umap__output_metric | : | euclidean | umap__output_metric_kwds | : | hline | umap__precomputed_knn | : | (None None None) | umap__random_state | : | hline | umap__repulsion_strength | : | 1.0 | umap__set_op_mix_ratio | : | 1.0 | umap__spread | : | 1.0 | umap__target_metric | : | categorical | umap__target_metric_kwds | : | hline | umap__target_n_neighbors | : | -1 | umap__target_weight | : | 0.5 | umap__tqdm_kwds | : | hline | umap__transform_mode | : | embedding | umap__transform_queue_size | : | 4.0 | umap__transform_seed | : | 42 | umap__unique | : | False | umap__verbose | : | False | lstm__keras_model | : | Sequential | lstm__layers | : | nil | lstm__seqlen | : | 0 | lstm__optimizer_name | : | adam | lstm__optimizer_sett | : | hline | lstm__compile_sett | : | hline | lstm__loss_sett | : | hline | lstm__loss_name | : | binary_crossentropy | lstm__metrics | : | hline | lstm__timeseries_sett | : | hline |
+| memory | : | hline | steps | : | ((lstm Model_binary (metrics= (accuracy binary_accuracy mse) seqlen=30))) | verbose | : | False | lstm | : | Model_binary | (metrics= (accuracy binary_accuracy mse) seqlen=30) | lstm__keras_model | : | Sequential | lstm__layers | : | nil | lstm__seqlen | : | 30 | lstm__optimizer_name | : | adam | lstm__optimizer_sett | : | hline | lstm__compile_sett | : | hline | lstm__loss_sett | : | hline | lstm__loss_name | : | binary_crossentropy | lstm__metrics | : | (accuracy binary_accuracy mse) | lstm__timeseries_sett | : | hline |
 
 
-#+begin_src python :session py1 :results output
-  searcher_name = 'RandomSearchCV'
+#+begin_src python :session py1 
+  searcher_name = 'RandomizedSearchCV'
   layers_hyper = []
   ###########
   layers_dict = dict()
@@ -394,24 +446,193 @@ basemodel._model.summary()
                 #            n_components=[3, 8, 15, 30],
                 #            min_dist=[0.05, 0.1, 0.4, 0.75],
                 #            random_state=42),
-                'umap':dict(n_neighbors=[30, 50],    
-                            n_components=[3, 2],         
-                            min_dist=[0.05, 0.2],     
-                            random_state=42),                    
-                'lstm':dict(seqlen=[10, 25],
-                            layers=layers_hyper,
-                            optimizer_name=[])
+                #'umap__n_neighbors':[30, 50],    
+                #'umap__n_components':[3, 2],         
+                #'umap__min_dist':[0.05, 0.2],     
+                #'umap__random_state':[42],                    
+                'lstm__seqlen':[10, 25],
+                'lstm__layers':layers_hyper,
+                'lstm__optimizer_name':['adam']
                 }
   searcher_settings = {'scoring':'f1',
                        'n_iter':25,
                        'verbose': True}
   cv_name = 'TimeSeriesSplit'
   cv_settings = {'n_splits': 3}
-  #_hypertuning1 = HyperTuning(pipe, searcher_name, searcher_settings,
-  #                           hyper_grid, cv_name, cv_settings)
-  #hypertuning1 = _hypertuning1()
-  #hypertuning1.fit(df_train.to_numpy())
+  _hypertuning1 = ml4qf.predictors.model_tuning.HyperTuning(pipe, searcher_name, searcher_settings,
+                                                            hyper_grid, cv_name, cv_settings)
+  hypertuning1 = _hypertuning1()
+  hypertuning1.fit(Xtrain_reduced, y_train, lstm__epochs=70, lstm__shuffle=False)
 
+#+end_src
+
+#+RESULTS:
+#+begin_example
+RandomizedSearchCV(cv=TimeSeriesSplit(gap=0, max_train_size=None, n_splits=3, test_size=None),
+                   estimator=Pipeline(steps=[('lstm',
+                                              Model_binary(metrics=['accuracy',
+                                                                    'binary_accuracy',
+                                                                    'mse'],
+                                                           seqlen=30))]),
+                   n_iter=25,
+                   param_distributions={'lstm__layers': [(('LSTM_1',
+                                                           (('units', 100),
+                                                            ('activation',
+                                                             'elu'),
+                                                            ('name', 'LSTM1'))),
+                                                          ('Dense_1',
+                                                           (('units', 1),
+                                                            ('activation',
+                                                             's...
+                                                            ('activation',
+                                                             'elu'),
+                                                            ('return_sequences',
+                                                             True),
+                                                            ('name', 'LSTM2'))),
+                                                          ('Dropout_2',
+                                                           (('rate', 0.3),
+                                                            ('name',
+                                                             'Drouput2'))),
+                                                          ('LSTM_3',
+                                                           (('units', 25),
+                                                            ('activation',
+                                                             'elu'),
+                                                            ('return_sequences',
+                                                             False),
+                                                            ('name', 'LSTM3'))),
+                                                          ('Dense_1',
+                                                           (('units', 1),
+                                                            ('activation',
+                                                             'sigmoid'),
+                                                            ('name',
+                                                             'Output'))))],
+                                        'lstm__optimizer_name': ['adam'],
+                                        'lstm__seqlen': [10, 25]},
+                   scoring='f1', verbose=True)
+#+end_example
+
+#+begin_src python :session py1 
+  import tensorflow.keras.backend
+  import itertools
+  umap_model = umap.UMAP()
+  lstm_model = model_keras.Model_binary(keras_model='Sequential',
+                                        seqlen=SEQ_LEN, optimizer_name='adam',
+                                        loss_name='binary_crossentropy',
+                                        metrics=['accuracy','binary_accuracy', 'mse'],
+                                        optimizer_sett=None, compile_sett=None, loss_sett=None)
+  pipe = sklearn.pipeline.Pipeline([('umap', umap_model),
+                                    ('lstm', lstm_model)])
+
+  searcher_name = 'RandomizedSearchCV'
+  layers_hyper = []
+  ###########
+  layers_dict = dict()
+  layers_dict['LSTM_1'] = dict(units=100, activation = 'elu', name='LSTM1')
+  layers_dict['Dense_1'] = dict(units=1, activation='sigmoid', name='Output')
+  layers_tuple = ml4qf.utils.dict2tuple(layers_dict)
+  layers_hyper.append(layers_tuple)
+  #####################
+  layers_dict = dict()
+  layers_dict['LSTM_1'] = dict(units=50, activation = 'elu', return_sequences=True, name='LSTM1')
+  layers_dict['LSTM_2'] = dict(units=50, activation = 'elu', return_sequences=False, name='LSTM2')
+  layers_dict['Dense_1'] = dict(units=1, activation='sigmoid', name='Output')
+  layers_tuple = ml4qf.utils.dict2tuple(layers_dict)
+  layers_hyper.append(layers_tuple)
+  ############
+  layers_dict = dict()
+  layers_dict['LSTM_1'] = dict(units=50, activation = 'elu', return_sequences=True, name='LSTM1')
+  layers_dict['Dropout_1'] = dict(rate=0.3, name='Drouput1')
+  layers_dict['LSTM_2'] = dict(units=25, activation = 'elu', return_sequences=True, name='LSTM2')
+  layers_dict['Dropout_2'] = dict(rate=0.3, name='Drouput2')
+  layers_dict['LSTM_3'] = dict(units=25, activation = 'elu', return_sequences=False, name='LSTM3')
+  layers_dict['Dense_1'] = dict(units=1, activation='sigmoid', name='Output')
+  layers_tuple = ml4qf.utils.dict2tuple(layers_dict)
+  layers_hyper.append(layers_tuple)
+  #####################
+  def product_dict(**kwargs):
+    keys = kwargs.keys()
+    vals = kwargs.values()
+    for instance in itertools.product(*vals):
+        yield dict(zip(keys, instance))
+
+  ###########
+  hyper_grid = {#'umap':dict(n_neighbors=[5, 15, 30, 50, 100],
+                #            n_components=[3, 8, 15, 30],
+                #            min_dist=[0.05, 0.1, 0.4, 0.75],
+                #            random_state=42),
+                'umap__n_neighbors':[30],    
+                'umap__n_components':[18],         
+                'umap__min_dist':[0.05],     
+                'umap__random_state':[42],                    
+                #'lstm__seqlen':[10, 25],
+                'lstm__layers':[layers_hyper[0]],
+                'lstm__optimizer_name':['adam']
+                }
+  searcher_settings = {'scoring':'f1',
+                       'n_iter':25,
+                       'verbose': True}
+  fit_settings = {'lstm__epochs':150, 'lstm__shuffle':False}
+  cv_name = 'TimeSeriesSplit'
+  cv_settings = {'n_splits': 3}
+  _hypertuning1 = ml4qf.predictors.model_tuning.HyperTuning(pipe, searcher_name, searcher_settings,
+                                                            hyper_grid, cv_name, cv_settings)
+  hypertuning1 = _hypertuning1()
+  hyperspace = list(product_dict(**hyper_grid))
+  
+#+end_src
+
+#+RESULTS:
+
+#+begin_src python :session py1
+  def do_hyper():
+    score = []
+    for hi in hyperspace:
+        tensorflow.keras.backend.clear_session()
+        pipe.set_params(**hi)
+        score_hi = []
+        for cvi in hypertuning1.cv.split(Xtrain_reduced):
+            index_train, index_test = cvi
+            Xtrain_i = Xtrain_reduced[index_train]
+            ytrain_i = y_train[index_train]
+            Xtest_i = Xtrain_reduced[index_test]
+            pipe.fit(Xtrain_i, ytrain_i, **fit_settings)
+            ypred = pipe.predict(Xtest_i)
+            score_i = sklearn.metrics.f1_score(y_train[index_test][SEQ_LEN-1:], ypred)
+            score_hi.append(score_i)
+ 
+        score.append(np.average(score_hi))
+ 
+    return score
+
+  score1 = do_hyper()
+#+end_src
+
+#+RESULTS:
+
+#+begin_src python :session py1
+def fun1():
+  a=[]
+  for i in range(5):
+    for j in range(3):
+      a.append(j)
+ 
+    a.append(i)
+ 
+  return a
+
+a = fun1()
+#+end_src
+
+#+RESULTS:
+
+#+begin_src python :session py1
+  a=[]
+  for i in range(5):
+    for j in range(3):
+      a.append(j)
+   
+    a.append(i)
+  
 #+end_src
 
 #+RESULTS:

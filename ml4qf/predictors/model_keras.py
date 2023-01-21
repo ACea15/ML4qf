@@ -113,9 +113,10 @@ class Model(BaseEstimator):
                     break
             # gather input and output parts of the pattern
             seq_x = X_in[i:end_ix, :]
-            seq_y = y_in[end_ix-1]
             X.append(seq_x)
-            y.append(seq_y)
+            if y_in is not None:
+                seq_y = y_in[end_ix-1]
+                y.append(seq_y)
         if y_in is None:
             return np.array(X)
         else:
@@ -244,7 +245,13 @@ class Model_binary(Model):
         #                                                         length=self.seqlen)
         self.y_predicted_ = self._model.predict(self.Xpred_generated_)
         ypred = np.where(self.y_predicted_ > 0.5, 1, 0)
-        return ypred
+        ypred = ypred.reshape(len(X) - self.seqlen + 1)
+        if y is not None:
+            #return ypred
+            diff = len(y) - len(ypred)
+            return np.hstack([y[:diff], ypred])
+        else:
+            return ypred
 
 if (__name__ == '__main__'):
 

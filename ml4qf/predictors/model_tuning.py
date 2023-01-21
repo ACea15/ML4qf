@@ -13,7 +13,7 @@ class HyperTuning:
         self.cv_settings = cv_settings
         self.searcher = None
         self._searcher_type = None
-        if cv_name is None or isinstance(cv_name, str):
+        if isinstance(cv_name, int) or cv_name is None:
             self.cv = cv_name
         else:
             self._cv = CrossValidation(self.cv_name, self.cv_settings)
