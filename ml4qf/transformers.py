@@ -1,7 +1,9 @@
 import sklearn.preprocessing
 import numpy as np
+import pandas as pd
+from sklearn.base import BaseEstimator, TransformerMixin, OneToOneFeatureMixin
 
-class Transformer:
+class TransformerFactory:
 
     def __init__(self,  transformer_name, transformer_settings={}):
 
@@ -13,8 +15,40 @@ class Transformer:
 
     def set_transformer(self):
 
-        self.transformer_type = getattr(sklearn.preprocessing, self.transformer_name)
-        self.transformer = self.transformer_type(**self.transformer_settings)
+        try:
+            self.transformer_type = globals()[self.transformer_name]
+            self.transformer = self.transformer_type(**self.transformer_settings)
+        except KeyError:
+            self.transformer_type = getattr(sklearn.preprocessing, self.transformer_name)
+            self.transformer = self.transformer_type(**self.transformer_settings)
+
+# create custom time transformer 
+class SeasonTransformer(BaseEstimator, TransformerMixin, OneToOneFeatureMixin):
+
+    def fit(self, X, y=None):
+        self.data = pd.DataFrame(
+            {
+        'Months': ["January",
+                   "February",
+                   "March",
+                   "April",
+                   "May",
+                   "June",
+                   "July",
+                   "August",
+                   "September",
+                   "October",
+                   "November",
+                   "December"]
+            }
+        )
+        self.num_months = 12
+        return self
+       
+    def transform(self, X):
+        Xt = X.copy()
+        Xt = np.sin(2 * np.pi * Xt / self.num_months)        
+        return Xt
 
 
 def build_transformation(df, transformers):
@@ -23,9 +57,9 @@ def build_transformation(df, transformers):
     for k, v in transformers.items():
         name = k.replace('Scaler', '')
         if 'settings' in v.keys():
-            transformer_ins = Transformer(k.split("_")[0], v['settings'])
+            transformer_ins = TransformerFactory(k.split("_")[0], v['settings'])
         else:
-            transformer_ins = Transformer(k.split("_")[0])
+            transformer_ins = TransformerFactory(k.split("_")[0])
         transformer = transformer_ins.transformer
         features_list = []
         for fi in v['features']:

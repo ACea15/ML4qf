@@ -1,4 +1,6 @@
+import numpy as np
 import sklearn.model_selection
+import ml4qf.utils
 
 class HyperTuning:
 
@@ -22,11 +24,18 @@ class HyperTuning:
         
     def set_searcher(self):
 
-        self._searcher_type = getattr(sklearn.model_selection, self.searcher_name)
-        self.searcher = self._searcher_type(self.predictor,
-                                            self.hyper_grid,
-                                            cv=self.cv,
-                                            **self.searcher_settings)
+        try:
+            self._searcher_type = globals()[self.searcher_name]
+            self.searcher = self._searcher_type(self.predictor,
+                                                self.hyper_grid,
+                                                cv=self.cv,
+                                                **self.searcher_settings)
+        except KeyError:
+            self._searcher_type = getattr(sklearn.model_selection, self.searcher_name)
+            self.searcher = self._searcher_type(self.predictor,
+                                                self.hyper_grid,
+                                                cv=self.cv,
+                                                **self.searcher_settings)
 
     def __call__(self):
 
@@ -49,3 +58,38 @@ class CrossValidation:
     def __call__(self):
 
         return self.cv
+    
+class Full_Grid:
+
+    def __init__(self, predictor, hyper_grid, cv, fit_sett=None, **kwargs):
+        
+        self.predictor = predictor,
+        self.hyper_grid = hyper_grid,
+        self.cv = cv,
+        self.settings = kwargs
+        self.hyper_space = list(ml4qf.utils.product_dict(**hyper_grid))
+        if fit_sett is not None:
+            self.fit_settings = fit_sett
+        else:
+            self.fit_settings = dict()
+            
+    def scoring(self, X, y, calls=None):
+        
+        score = []
+        for hi in self.hyper_space:
+            #calls: tensorflow.keras.backend.clear_session()
+            self.predictor.set_params(**hi)
+            score_hi = []
+            for cvi in self.cv.split(X):
+                index_train, index_test = cvi
+                Xtrain_i = X[index_train]
+                ytrain_i = y[index_train]
+                Xtest_i = X[index_test]
+                self.predictor.fit(Xtrain_i, ytrain_i, **self.fit_settings)
+                ypred = self.predictor.predict(Xtest_i)
+                score_i = self.predictor.score(y[index_test], ypred)
+                score_hi.append(score_i)
+    
+            score.append(np.average(score_hi))
+    
+        return score

@@ -110,6 +110,8 @@ class Model:
         som_labels = set()
         while features_len < min_num_features and i < num_iterations:
             som_labeli, target_name = self.feature_selection(self.W, labels=labels, target_index = target_index, a = a_range[i % len(a_range)])
+            if target_nameX in som_labeli:
+                som_labeli.remove(target_nameX)
             som_labels = som_labels.union(set(som_labeli))
             features_len = len(som_labels)
             i += 1

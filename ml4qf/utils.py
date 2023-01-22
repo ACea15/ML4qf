@@ -1,5 +1,6 @@
 import numpy as np
-
+import itertools
+import pandas as pd
 # define seed
 def set_seeds(libraries, seed=42):
     for li in libraries:
@@ -43,3 +44,18 @@ def fix_imbalance(x, *args):
     len1 = sum(bins)
     len0 =  len_bins - len1
     return ((len1 - len0) / len_bins)
+
+def product_dict(**kwargs):
+    keys = kwargs.keys()
+    vals = kwargs.values()
+    for instance in itertools.product(*vals):
+        yield dict(zip(keys, instance))
+
+def print_keras_layers(model):
+    table = pd.DataFrame(columns=["Name", "Type", "Shape", "Param"])
+    for layer in model.layers:
+        table = table.append({"Name":layer.name,
+                              "Type": layer.__class__.__name__,
+                              "Shape": layer.output_shape,
+                              "Param": layer.count_params()}, ignore_index=True)
+    return table

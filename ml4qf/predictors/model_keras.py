@@ -1,7 +1,7 @@
 import numpy as np
 import pickle
 from sklearn.base import BaseEstimator
-
+import sklearn.metrics
 # tensorflow modules
 import tensorflow.keras.models as tf_models  # Sequential
 import tensorflow.keras.layers as tf_layers  # import Dense, Dropout, Flatten, LSTM
@@ -26,7 +26,7 @@ def to_dict(*args):
 
 class Model(BaseEstimator):
 
-    def __init__(self,  keras_model='Sequential', layers=(), seqlen=0,
+    def __init__(self,  keras_model='Sequential', layers=(), seqlen=0, batch_size=None,
                  optimizer_name='adam', loss_name='mse', metrics=None,
                  optimizer_sett=None, compile_sett=None, loss_sett=None,
                  timeseries_sett=None):
@@ -54,6 +54,7 @@ class Model(BaseEstimator):
         self.keras_model = keras_model
         self.layers = layers
         self.seqlen = seqlen
+        self.batch_size = batch_size
         self.loss_name = loss_name
         self.loss_sett = loss_sett        
         self.metrics = metrics
@@ -61,7 +62,7 @@ class Model(BaseEstimator):
         self.optimizer_sett = optimizer_sett
         self.compile_sett = compile_sett
         self.timeseries_sett = timeseries_sett
-        
+
     def fit(self, X, y, **kwargs):
         """Fit method
 
@@ -89,6 +90,7 @@ class Model(BaseEstimator):
             self.X_generated_, self.y_generated_ = self.split_data(X, self.seqlen, y)
             self._fit_history = self._model.fit(self.X_generated_,
                                                 self.y_generated_,
+                                                batch_size=self.batch_size,
                                                 callbacks=self._callbacks,
                                                 **kwargs
                                                 )
@@ -131,6 +133,7 @@ class Model(BaseEstimator):
         dic = {"keras_model": self.keras_model,
                "layers": self.layers,
                "seqlen": self.seqlen,
+               "batch_size": self.batch_size,
                "optimizer_name": self.optimizer_name,
                "optimizer_sett": self.optimizer_sett,
                "compile_sett": self.compile_sett,
@@ -226,11 +229,11 @@ class Model(BaseEstimator):
 
 class Model_binary(Model):
 
-    def __init__(self,  keras_model='Sequential', layers=(), seqlen=0,
+    def __init__(self,  keras_model='Sequential', layers=(), seqlen=0, batch_size=None,
                  optimizer_name='adam', loss_name='binary_crossentropy', metrics=None,
                  optimizer_sett=None, compile_sett=None, loss_sett=None, timeseries_sett=None):
 
-        super().__init__(keras_model, layers, seqlen, optimizer_name,
+        super().__init__(keras_model, layers, seqlen, batch_size, optimizer_name,
                          loss_name, metrics, optimizer_sett, compile_sett,
                          loss_sett, timeseries_sett)
         
@@ -245,13 +248,23 @@ class Model_binary(Model):
         #                                                         length=self.seqlen)
         self.y_predicted_ = self._model.predict(self.Xpred_generated_)
         ypred = np.where(self.y_predicted_ > 0.5, 1, 0)
-        ypred = ypred.reshape(len(X) - self.seqlen + 1)
         if y is not None:
-            #return ypred
-            diff = len(y) - len(ypred)
-            return np.hstack([y[:diff], ypred])
-        else:
-            return ypred
+            ypred = ypred.reshape(len(X) - self.seqlen + 1)
+        return ypred
+        # if y is not None:
+        #     #return ypred
+        #     diff = len(y) - len(ypred)
+        #     return np.hstack([y[:diff], ypred])
+        # else:
+        #     return ypred
+
+    def score(self, X, y):
+
+        #TODO: make this general
+        ypred = self.predict(X)
+        score1 = sklearn.metrics.f1_score(y[self.seqlen-1:], ypred,
+                                          average='macro')
+        return score1
 
 if (__name__ == '__main__'):
 
@@ -260,6 +273,7 @@ if (__name__ == '__main__'):
     #check_estimator(LinearSVC())  # passes
 
     check_estimator(Model())
+    #check_estimator(Model_binary())
 
 
     # # summarize the sonar dataset
