@@ -37,6 +37,8 @@
   import numpy as np
   import pathlib
   import yfinance as yf
+  from tabulate import tabulate
+
   # from umap import UMAP
   # import matplotlib.pyplot as plt
   # from mpl_toolkits.mplot3d import Axes3D
@@ -97,6 +99,8 @@
                }
 
 #+end_src
+
+#+RESULTS:
 
 #+begin_src python :session py1 :results none 
   # 
@@ -184,13 +188,13 @@
 
 #+begin_src python :session py1 :results file
   fig1_path= img_dir +'/stock_Close.png'
-  fig1 = px.line(df_, y=['momentum_1d', 'momentum_5d', 'momentum_15d'])
+  fig1 = px.line(df_, y=['Ret_1d', 'Ret_5d', 'Ret_15d'])
   fig1.write_image(fig1_path)
   fig1_path
 #+end_src
 
 #+RESULTS:
-[[file:./img/_EADSY_2014-10-02_2019-10-01/stock_Close.png]]
+[[file:./img/_EADSY_2003-10-05_2019-10-01/stock_Close.png]]
 
 *** Correlation
 
@@ -218,8 +222,8 @@ df_.target.value_counts()
 #+end_src
 
 #+RESULTS:
-: 1    1142
-: 0    1141
+: 0    1487
+: 1    1486
 : Name: target, dtype: int64
 
 
@@ -235,29 +239,81 @@ print(zscores)
 
 #+RESULTS:
 #+begin_example
-Month_               1.626907
-momentum_1d          8.908100
-momentum_2d          7.558079
-momentum_5d          6.297926
-momentum_8d          5.761554
+Month_               1.618382
+momentum_1d          9.797553
+momentum_2d          8.325245
+momentum_5d          6.923864
+momentum_8d          6.349095
                       ...    
-THERMOl_20_2_0.5     3.347918
-THERMOs_20_2_0.5     1.709585
-TRUERANGE_1         10.534021
-UI_14                4.591497
-target               1.000438
+THERMOl_20_2_0.5     3.453417
+THERMOs_20_2_0.5     1.720094
+TRUERANGE_1         11.346320
+UI_14                5.719633
+target               1.000336
 Length: 177, dtype: float64
 #+end_example
 
+    #+begin_src python :session py1:var tbl=zscore6 :colnames no :results output
+    import pandas as pd
+    df = pd.DataFrame(tbl[1:], columns=tbl[0])
+    print(df, "\n")
+    print(df["Patients"].mean())
+    #+end_src
+
+    #+RESULTS:
+    : Python 3.10.8 | packaged by conda-forge | (main, Nov 22 2022, 08:23:14) [GCC 10.4.0] on linux
+    : Type "help", "copyright", "credits" or "license" for more information.
+    : Traceback (most recent call last):
+    :   File "<stdin>", line 1, in <module>
+    :   File "/tmp/babel-E0LHzc/python-62CCU3", line 2, in <module>
+    :     df = pd.DataFrame(tbl[1:], columns=tbl[0])
+    : NameError: name 'tbl' is not defined
+    : python.el: native completion setup loaded
+
+#+begin_src python :session py1 :results output
+  zscore5 = zscores[np.where(zscores>5)[0]]
+  zscore6 = zscores[np.where(zscores>6)[0]]
+  momentum = ['momentum_%sd'%i for i in FEATURES1['momentum_']]
+  robust_scaler = set(zscore7.keys()).union(momentum) - set(['Ret_1d', 'Ret_5d','Std_3d', 'Std_8d'])
+  #robustscaler += momentum
+  print(zscore6)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+momentum_1d         9.797553
+momentum_2d         8.325245
+momentum_5d         6.923864
+momentum_8d         6.349095
+OC_                 7.111603
+HL_                17.900512
+Ret_1d              8.650474
+Ret_5d              7.179704
+Std_3d              7.467710
+Std_8d              6.306172
+volume_            25.036073
+VOLUME_EMA_5       17.933932
+VOLUME_EMA_10      13.547161
+VOLUME_EMA_15      10.946547
+VOLUME_EMA_20       9.275857
+VOLUME_EMA_30       7.269476
+BIAS_SMA_5          6.245809
+EFI_13              8.728109
+BBB_5_2.0           7.599345
+PDIST              15.234062
+THERMO_20_2_0.5    12.317750
+TRUERANGE_1        11.346320
+dtype: float64
+#+end_example
 
 #+begin_src python :session py1 :results none
 
   transformers = {'SeasonTransformer':{'features': ['Month_']},
                   'MinMaxScaler': {'features': ['sign_return']},
-                  'StandardScaler_1': {'features': ['EMA', 'MA', 'Std', 'Ret', 'OC']},
-                  'RobustScaler': {'features': ['momentum', 'volume', 'HL']},
-                  'StandardScaler_2': {'features': pa_volfeatures},
-                  'StandardScaler_3': {'features': pa_features}
+                  'RobustScaler': {'features': robust_scaler},
+                  'StandardScaler_1': {'features': ['EMA', 'MA', 'Std', 'Ret']},
+                  'StandardScaler_2': {'features': list(set(pa_volfeatures) - robust_scaler)},
+                  'StandardScaler_3': {'features': list(set(pa_features) - robust_scaler)}
                   }
 
   columns = ml4qf.transformers.build_transformation(df_, transformers)
@@ -266,6 +322,16 @@ Length: 177, dtype: float64
   #ct_validation = sklearn.compose.ColumnTransformer(columns, remainder='passthrough')
 
 #+end_src
+
+#+begin_src python :results value raw :session py1 :return tabulate(df, headers=df.columns, tablefmt='orgtbl')
+df = pd.DataFrame({
+    "a": [1,2,3],
+    "b": [4,5,6]
+})
+#+end_src
+
+#+RESULTS:
+
 
 *** Split data
 #+begin_src python :session py1 :results output
@@ -281,7 +347,7 @@ Length: 177, dtype: float64
   df_train_scaled = ml4qf.transformers.scale_df(df_train, columns_validation)
   assert (Xtrain_scaled == df_train_scaled.to_numpy()).all(), "scaling failed"
   #Xtrain_scaled = ct.transform(Xtrain)
-
+  assert len([i for i in ct.get_feature_names_out() if i[:9]=='remainder']) == 1, "some scaling missing"
 #+end_src
 
 #+RESULTS:
@@ -300,8 +366,10 @@ Length: 177, dtype: float64
 #+end_src
 
 #+RESULTS:
-: Total number of iterations: 6
-: ['Ret_75d', 'MASSI_9_25', 'CMF_75', 'THERMO_20_2_0.5', 'EFI_13', 'EMA_50d', 'Std_38d', 'sign_return_4d', 'AROOND_20', 'VOLUME_EMA_5', 'momentum_75d', 'sign_return_7d', 'VOLUME_EMA_10', 'volume_', 'BIAS_SMA_35', 'UI_14', 'PDIST', 'BIAS_SMA_20', 'MA_60d', 'Ret_5d', 'Std_23d', 'TSI_13_25_13', 'TRIX_50_9', 'Std_58d', 'VOLUME_EMA_15', 'Ret_1d', 'sign_return_3d', 'Month_', 'THERMOl_20_2_0.5', 'NATR_14']
+: /home/acea/anaconda3/envs/qfpy/lib/python3.10/site-packages/minisom.py:379: ComplexWarning: Casting complex values to real discards the imaginary part
+:   self._weights[i, j] = c1*pc[pc_order[0]] + c2*pc[pc_order[1]]
+: Total number of iterations: 8
+: ['volume_', 'VOLUME_EMA_20', 'VOLUME_EMA_10', 'EFI_13', 'momentum_1d', 'BIAS_SMA_10', 'Std_68d', 'BBU_5_2.0', 'HL_', 'momentum_2d', 'TRIXs_50_9', 'AROONU_5', 'momentum_75d', 'sign_return_3d', 'VOLUME_EMA_30', 'TRIXs_15_9', 'CMF_5', 'Ret_60d', 'Ret_50d', 'BIAS_SMA_35', 'VOLUME_EMA_5', 'Std_23d', 'CMF_50', 'sign_return_2d', 'THERMO_20_2_0.5', 'Std_28d', 'THERMOl_20_2_0.5', 'ATRr_14', 'NATR_14', 'THERMOs_20_2_0.5', 'TRIXs_5_9', 'UI_14', 'sign_return_6d']
 
 
 #+begin_src python :session py1 :results file
@@ -372,6 +440,8 @@ Length: 177, dtype: float64
   # layers_dict['LSTM_1'] = dict(units=50, activation = 'elu', name='LSTM1')
   # layers_dict['Dense_1'] = dict(units=1, activation='sigmoid', name='Output')
   #####################
+  winner = {'batch_size': 16, 'layers': (('LSTM_1', (('units', 70), ('activation', 'relu'), ('return_sequences', True), ('name', 'LSTM1'))), ('Dropout_1', (('rate', 0.5), ('name', 'Drouput1'))), ('LSTM_2', (('units', 50), ('activation', 'relu'), ('return_sequences', False), ('name', 'LSTM2'))), ('Dense_1', (('units', 1), ('activation', 'sigmoid'), ('name', 'Output')))), 'optimizer_name': 'adam', 'seqlen': 30}
+  ####################
   layers_tuple = ml4qf.utils.dict2tuple(layers_dict)
   #######################
   base_model = model_keras.Model_binary(keras_model='Sequential', layers=layers_tuple,
@@ -379,28 +449,36 @@ Length: 177, dtype: float64
                                         loss_name='binary_crossentropy',
                                         metrics=['accuracy','binary_accuracy', 'mse'],
                                         optimizer_sett=None, compile_sett=None, loss_sett=None)
-  base_model.fit(Xtrain_reduced, y_train, epochs=100, batch_size=64, shuffle=False, verbose=1)
+  base_model.set_params(**winner)
+  base_model.fit(Xtrain_reduced, y_train, epochs=100, shuffle=False, verbose=1)
 
   # summary
-  base_model._model.summary()
+  #base_model._model.summary()
 
 #+end_src
 
 #+RESULTS:
-: Model_binary(layers=(('LSTM_1',
-:                       (('units', 50), ('activation', 'elu'),
-:                        ('name', 'LSTM1'))),
-:                      ('Dense_1',
-:                       (('units', 1), ('activation', 'sigmoid'),
-:                        ('name', 'Output')))),
-:              metrics=['accuracy', 'binary_accuracy', 'mse'], seqlen=15)
+#+begin_example
+Model_binary(batch_size=16,
+             layers=(('LSTM_1',
+                      (('units', 70), ('activation', 'relu'),
+                       ('return_sequences', True), ('name', 'LSTM1'))),
+                     ('Dropout_1', (('rate', 0.5), ('name', 'Drouput1'))),
+                     ('LSTM_2',
+                      (('units', 50), ('activation', 'relu'),
+                       ('return_sequences', False), ('name', 'LSTM2'))),
+                     ('Dense_1',
+                      (('units', 1), ('activation', 'sigmoid'),
+                       ('name', 'Output')))),
+             metrics=['accuracy', 'binary_accuracy', 'mse'], seqlen=30)
+#+end_example
 
 
 
 *** Classification
 #+begin_src python :session py1
   ypred_basemodel = base_model.predict(Xtest_reduced, y_test)#.reshape(len(y_test[SEQ_LEN-1:]))
-  test_report = sklearn.metrics.classification_report(y_test[SEQ_LEN-1:], 
+  test_report = sklearn.metrics.classification_report(base_model.ypred_generated_, 
                                                       ypred_basemodel, output_dict=True)
   dftest_report = pd.DataFrame(test_report).transpose()
   print(dftest_report)
@@ -412,7 +490,7 @@ Length: 177, dtype: float64
 
 #+begin_src python :session py1
   ypred_basemodeltrain = base_model.predict(Xtrain_reduced, y_train)#.reshape(len(y_train[SEQ_LEN-1:]))
-  train_report = sklearn.metrics.classification_report(y_train[SEQ_LEN-1:],
+  train_report = sklearn.metrics.classification_report(base_model.ypred_generated_,
                                                        ypred_basemodeltrain, output_dict=True)
   dftrain_report = pd.DataFrame(train_report).transpose()
   print(dftrain_report)

@@ -70,7 +70,7 @@ class FinancialData:
             df = pd.read_csv(data_file, index_col=0, parse_dates=True)
         else:
             print("***** Loading data from Yahoo Finance *****")
-            df = yf.download(ticker, start=date_start, end=date_end, interval=interval, prepost=False)
+            df = yf.download(ticker, start=date_start, end=date_end, interval=interval, ignore_tz = True)
             df.to_csv(data_file)
         if label is None:
             return df

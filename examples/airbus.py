@@ -258,3 +258,10 @@ _hypertuning1 = ml4qf.predictors.model_tuning.HyperTuning(lstm_model, searcher_n
                                                           hyper_grid, cv_name, cv_settings)
 hypertuning1 = _hypertuning1()
 hypertuning1.fit(Xtrain_reduced, y_train, epochs=85, verbose=False, shuffle=False)
+
+import pickle
+pickle.dump(hypertuning1, "./data/hypertuning1.pickle")
+with open("./data/hypertuning1.pickle", 'wb') as handle:
+    pickle.dump(hypertuning1, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+            
