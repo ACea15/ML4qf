@@ -1,12 +1,12 @@
 import importlib
 import abc
+import ml4qf.predictors.model_keras as model_keras
 
 sklearn_engines = ["neighbors", "neural_network", "semi_supervised", "svm",
                    "tree", "ensemble", "naive_bayes"]
 
 class Model_factory:
 
-    
     def __init__(self, library, engine_type, engine, engine_settings):
         """Build sklearn models on demand.
 
@@ -33,17 +33,16 @@ class Model_factory:
     def build(self):
 
         if self.library == 'keras':
-            from ml4qf.predictors.model_keras import Model_keras
+            Model_keras = getattr(model_keras, self.engine_type)
             self.model = Model_keras(**self.engine_settings)
-            self.engine_type = 'tailored keras'
-            self.engine = 'deep_learning'
+            self.engine = 'keras'
         elif self.library == 'scikit':
             module = importlib.import_module(f'sklearn.{self.engine_type}')
             engine_class = getattr(module, self.engine)
             self.model = engine_class(**self.engine_settings)
         else:
             raise NameError("library %s not implemented" % self.library)
-        
+
     def __call__(self):
 
         return self.model
@@ -69,3 +68,4 @@ class Interface():
 
 def factory_models():
     pass
+

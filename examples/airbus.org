@@ -58,7 +58,7 @@
   import scipy.stats
   import pandas as pd
   import pandas_ta as ta
-
+  import pickle
   import ml4qf
   import ml4qf.utils
   import ml4qf.predictors.model_som
@@ -66,6 +66,9 @@
   import ml4qf.transformers
   import ml4qf.predictors.model_keras as model_keras
   import ml4qf.predictors.model_tuning
+  import config
+  import importlib
+  importlib.reload(config)
 #+END_SRC
 
 #+begin_src python :session py1 :results none :exports none
@@ -76,59 +79,22 @@
 #+end_src
 * Introduction
 * Feature engineering
+:PROPERTIES:
+:header-args: :exports none
+:END:
 
 #+begin_src python :session py1 :results none :exports none
-  # 
-  ###########################################
-  # Get data and create Features            #
-  # Ticker: EADSY (Airbus)                  #
-  # Ten years from October 2019 backwards   #
-  ###########################################
-
-  FEATURES1 = {'Month_': None,
-      'momentum_': [1, 2, 5, 8, 15, 23, 30, 40, 65, 75],
-      'OC_': None,
-      'HL_': None,
-      'Ret_': [1, 5, 15, 20, 25, 30, 40, 50, 60, 75],
-      #'RetLog_': list(range(10, 90, 10)),
-      'Std_': list(range(3, 75, 5)),
-      'MA_': [5, 10, 18, 25, 35, 50, 60, 70],
-      'EMA_': [5, 10, 18, 25, 35, 50, 60, 70],
-      'sign_return_': list(range(1,10)),
-      'volume_':None,
-      "ema": {"close": "volume", "length": [5, 10, 15, 20, 30], "prefix": "VOLUME"},
-      "log_return": {"length": [1, 10, 20, 35, 50], "cumulative": True},
-      "bias":{"length": [5, 10, 15, 20, 35, 50, 60, 75]},
-      "aroon":{"length": [5, 10, 15, 20, 35, 50, 60, 75]},
-      "stoch":{},
-      "trix":{"length": [5, 10, 15, 20, 35, 50, 60, 75]},
-      "tsi":{},
-      #"volume---":{},
-      "efi":{},
-      "mfi": {"length": [5, 10, 15, 20, 35, 50, 60, 75]},
-      "cmf":{"length": [5, 10, 15, 20, 35, 50, 60, 75]},
-      "ohlc4":{},
-      "volatility":"whole"
-      #"momentum":"whole"
-      #"percent_return": dict(length=2, append=False),
-      #"log_return": [1, 2]
-  }
-
-#+end_src
-
-#+begin_src python :session py1 :results none :exports none
-  # 
-  ###########################################
-  # Get data and create Features            #
-  # Ticker: EADSY (Airbus)                  #
-  # Ten years from October 2019 backwards   #
-  ###########################################
-
-  data = ml4qf.collectors.financial_features.FinancialData("EADSY", 2019, 10, 1, 365*16, FEATURES1)
+  
+  data = ml4qf.collectors.financial_features.FinancialData(config.TICKER,
+                                                           config.YEAR0,
+                                                           config.MONTH0,
+                                                           config.DAY0,
+                                                           config.NUM_DAYS,
+                                                           config.FEATURES)
   img_dir = "./img/" + data.label
   pathlib.Path(img_dir).mkdir(parents=True, exist_ok=True)
-  df_  = data.features.df.drop(data.df.columns, axis=1)
-  df_.dropna(inplace=True)
+  #df_  = data.features.df.drop(data.df.columns, axis=1)
+  #df_.dropna(inplace=True)
 
 #+end_src
 
@@ -192,7 +158,6 @@ df_.target.value_counts()
 : 1    1486
 : Name: target, dtype: int64
 
-
 ** Feature scaling
 
 https://towardsdatascience.com/scale-standardize-or-normalize-with-scikit-learn-6ccc7d176a02
@@ -238,7 +203,6 @@ tabulate(df_[:10], headers=df_.columns, tablefmt='orgtbl')
 | 2007-12-19 00:00:00 |       12 |    -0.0249996 |     0.0124998 |    -0.175     |     0.0875001 |     -0.0749998 |     -0.425     |     -0.0174999 |     -0.6625    |         0.8025 |       0.55     |     0 | 0.150001  | -0.00311522 | -0.0214068  | -0.0092879  |  0.00787402 | -0.0518519 | -0.00218272 | -0.0764791  |  0.00628933 |  0.116539 | 0.0738255 | 0.00393072 | 0.0129839  | 0.0139332 | 0.012829  | 0.0168503 | 0.0162243 | 0.0233868 | 0.0229586 | 0.0228287 | 0.0226582 | 0.0222556 | 0.02148   | 0.0210663 | 0.0206286 | 0.0203624 | 8.03292 |  8.00545 |  7.96829 |  8.04038 |  8.0934  |  8.19456 |  8.10135 |  7.96246 |  8.00933 |   8.02987 |   8.03421 |   8.01131 |   7.97355 |   7.93516 |   7.92234 |   7.91697 |                0 |                0 |                0 |                0 |                0 |                0 |                0 |                0 |                0 |     57600 |        54045.3 |         56045.6 |         65651.1 |         76838.3 |         93711.1 |    -0.04282   |     -0.04282   |     -0.04282   |     -0.04282   |     -0.04282   | -0.000562173 |  -0.00230716  |   0.00305095  |   0.00494623  |   -0.00990099 |  -0.0243248   |   -0.0144091  |    0.0101265  |        100 |          0 |         -100 |           0 |          50 |            50 |     26.6667 |     66.6667 |       40      |          45 |          75 |            30 |     68.5714 |     0       |      -68.5714 |          78 |          26 |           -52 |     0       |     38.3333 |       38.3333 |     5.33333 |     50.6667 |       45.3333 |         54.0741 |         53.284  |  0.0528574 |   0.0736584 |  -0.0483318 |    -0.140144 |  -0.092176  |   -0.117467  | -0.0379006  | -0.0232464   |   0.0832191 |    0.101129  |   0.0676036 |    0.0704282 |   0.0426226 |    0.0410614 |   0.0199474 |   0.0170276  |       -3.48889 |        -4.28642 | 1935.15  |  41.9314 |  72.2559 |  58.0794 |  66.1394 |  76.3869 |  60.3281 |  60.4414 |  60.4394 | -0.464526 | -0.472992 | -0.402745 | -0.378793 | 0.453672 | 0.341601 | 0.344806 | 0.344805 | 7.98125 |        8.01733 |        8.17335 |        7.86132 |        0.156013 |    7.73255 |    7.96062 |    8.23193 |  0.154719 |     7.95951 |      8.0045 |     8.04949 |     1.12408 |    0.449988 |         7.7 |     7.98125 |      8.2625 | 7.9179  | 8.2385  | 7.5973  |     7.72662 |     8.02358 |     8.32054 |      24.091  |   1.93399 | 0.325001  |  49.6725 |         0.1375    |            0.122348 |                  1 |                  1 |     0.150001  | 4.96274 |        0 |
 | 2007-12-20 00:00:00 |       12 |    -0.0374999 |    -0.0624995 |    -0.0724998 |    -0.15      |     -0.0999999 |     -0.5125    |      0.225     |     -0.725     |         0.765  |       0.7375   |     0 | 0.150001  | -0.00468749 | -0.00902299 | -0.0124031  |  0.018874   | -0.070073  |  0.0290791  | -0.0834532  | -0.0154559  |  0.074199 | 0.102076  | 0.00502485 | 0.00876483 | 0.0130189 | 0.0128969 | 0.0167652 | 0.0161431 | 0.0232044 | 0.0229402 | 0.0223446 | 0.0221596 | 0.0219284 | 0.0212909 | 0.0210599 | 0.0206433 | 0.0203751 | 7.9975  |  8.01341 |  7.97289 |  8.02212 |  8.07674 |  8.1948  |  8.11443 |  7.97391 |  8.00264 |   8.02425 |   8.03062 |   8.0095  |   7.97326 |   7.93568 |   7.92299 |   7.9176  |                1 |                0 |                0 |                0 |                0 |                0 |                1 |                0 |                0 |    128400 |        78830.2 |         69201   |         73494.8 |         81749   |         95949.1 |    -0.0475186 |     -0.0475186 |     -0.0475186 |     -0.0475186 |     -0.0475186 | -0.00344179  |  -0.00791177  |  -0.000815643 |  -0.000690244 |   -0.0124906  |  -0.0286021   |   -0.0201357  |    0.0041448  |         80 |         60 |          -20 |           0 |          40 |            40 |     20      |     60      |       40      |          40 |          70 |            30 |     65.7143 |    28.5714  |      -37.1429 |          76 |          24 |           -52 |     0       |     36.6667 |       36.6667 |     4       |     49.3333 |       45.3333 |         52.5926 |         53.0864 |  0.0100901 |   0.0991341 |  -0.0419587 |    -0.115485 |  -0.0870421 |   -0.112361  | -0.0397888  | -0.0279916   |   0.0790736 |    0.0965017 |   0.0666709 |    0.0697504 |   0.04278   |    0.0414886 |   0.0205319 |   0.0177803  |       -3.79173 |        -4.21575 |  970.842 |  71.5265 |  74.9231 |  67.8866 |  72.3486 |  78.2947 |  60.8481 |  61.0325 |  61.054  | -0.609159 | -0.595193 | -0.53839  | -0.410528 | 0.408082 | 0.321369 | 0.325978 | 0.326655 | 7.99375 |        8.00667 |        8.16228 |        7.85105 |        0.155612 |    7.73882 |    7.968   |    8.24132 |  0.154382 |     7.94699 |      7.99   |     8.03301 |     1.07663 |    0.180318 |         7.7 |     7.98125 |      8.2625 | 7.94451 | 8.252   | 7.63703 |     7.72051 |     8.01776 |     8.31502 |      24.2701 |   1.93886 | 0.337501  |  44.3236 |         0.0625    |            0.116648 |                  1 |                  1 |     0.150001  | 4.66355 |        1 |
 #+end_example
-
 
 #+begin_src python :session py1 :results output
   zscore5 = zscores[np.where(zscores>5)[0]]
@@ -325,10 +289,10 @@ dtype: float64
 #+end_src
 
 #+RESULTS:
-: /home/acea/anaconda3/envs/qfpy/lib/python3.10/site-packages/minisom.py:379: ComplexWarning: Casting complex values to real discards the imaginary part
+: /home/ac5015/anaconda3/envs/qfpy/lib/python3.10/site-packages/minisom.py:379: ComplexWarning: Casting complex values to real discards the imaginary part
 :   self._weights[i, j] = c1*pc[pc_order[0]] + c2*pc[pc_order[1]]
-: Total number of iterations: 8
-: ['volume_', 'VOLUME_EMA_20', 'VOLUME_EMA_10', 'EFI_13', 'momentum_1d', 'BIAS_SMA_10', 'Std_68d', 'BBU_5_2.0', 'HL_', 'momentum_2d', 'TRIXs_50_9', 'AROONU_5', 'momentum_75d', 'sign_return_3d', 'VOLUME_EMA_30', 'TRIXs_15_9', 'CMF_5', 'Ret_60d', 'Ret_50d', 'BIAS_SMA_35', 'VOLUME_EMA_5', 'Std_23d', 'CMF_50', 'sign_return_2d', 'THERMO_20_2_0.5', 'Std_28d', 'THERMOl_20_2_0.5', 'ATRr_14', 'NATR_14', 'THERMOs_20_2_0.5', 'TRIXs_5_9', 'UI_14', 'sign_return_6d']
+: Total number of iterations: 6
+: ['volume_', 'CMF_15', 'TRUERANGE_1', 'MFI_50', 'Std_58d', 'sign_return_9d', 'Std_33d', 'momentum_2d', 'Std_38d', 'sign_return_7d', 'Ret_5d', 'AROONU_50', 'BBB_5_2.0', 'CMF_10', 'Ret_50d', 'AROONOSC_75', 'Std_43d', 'VOLUME_EMA_30', 'sign_return_2d', 'TRIXs_5_9', 'momentum_75d', 'Std_23d', 'NATR_14', 'TRIX_10_9', 'Std_73d', 'TRIXs_15_9', 'BIAS_SMA_50', 'VOLUME_EMA_15', 'VOLUME_EMA_20', 'THERMO_20_2_0.5', 'Std_3d']
 
 
 #+begin_src python :session py1 :results file
@@ -416,6 +380,22 @@ dtype: float64
 
 #+end_src
 
+#+RESULTS:
+#+begin_example
+Model_binary(batch_size=16,
+             layers=(('LSTM_1',
+                      (('units', 70), ('activation', 'relu'),
+                       ('return_sequences', True), ('name', 'LSTM1'))),
+                     ('Dropout_1', (('rate', 0.5), ('name', 'Drouput1'))),
+                     ('LSTM_2',
+                      (('units', 50), ('activation', 'relu'),
+                       ('return_sequences', False), ('name', 'LSTM2'))),
+                     ('Dense_1',
+                      (('units', 1), ('activation', 'sigmoid'),
+                       ('name', 'Output')))),
+             metrics=['accuracy', 'binary_accuracy', 'mse'], seqlen=30)
+#+end_example
+
 *** Classification
 #+begin_src python :session py1
   ypred_basemodel = base_model.predict(Xtest_reduced, y_test)#.reshape(len(y_test[SEQ_LEN-1:]))
@@ -427,6 +407,7 @@ dtype: float64
 #+end_src
 
 #+RESULTS:
+: None
 
 
 #+begin_src python :session py1
@@ -439,6 +420,7 @@ dtype: float64
 #+end_src
 
 #+RESULTS:
+: None
 
 * Cross validation
 ** LSTM model design
@@ -701,6 +683,43 @@ a = fun1()
   print(dftrain_report)
 
 #+end_src
+
+** Read optimization
+#+begin_src python :session py1
+
+  with open('./optimization_data/hypertuning11.pickle', 'rb') as fp:
+      hypertuning1 = pickle.load(fp)
+
+  lstm_hypermodel = hypertuning1.best_estimator_
+  hypertuning1.best_score_
+#+end_src
+
+#+RESULTS:
+: 0.5308465228700386
+
+*** Classification
+#+begin_src python :session py1
+  ypred_basemodel = lstm_hypermodel.predict(Xtest_reduced, y_test)#.reshape(len(y_test[SEQ_LEN-1:]))
+  test_report = sklearn.metrics.classification_report(lstm_hypermodel.ypred_generated_, 
+                                                      ypred_basemodel, output_dict=True)
+  dftest_report = pd.DataFrame(test_report).transpose()
+  print(dftest_report)
+
+#+end_src
+
+#+RESULTS:
+
+
+#+begin_src python :session py1
+  ypred_basemodeltrain = lstm_hypermodel.predict(Xtrain_reduced, y_train)#.reshape(len(y_train[SEQ_LEN-1:]))
+  train_report = sklearn.metrics.classification_report(lstm_hypermodel.ypred_generated_,
+                                                       ypred_basemodeltrain, output_dict=True)
+  dftrain_report = pd.DataFrame(train_report).transpose()
+  print(dftrain_report)
+
+#+end_src
+
+#+RESULTS:
 
 * COMMENT Implementation
 

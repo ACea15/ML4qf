@@ -2,26 +2,32 @@ import sklearn.preprocessing
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin, OneToOneFeatureMixin
+from sklearn.compose import make_column_selector, ColumnTransformer
 
 class TransformerFactory:
 
-    def __init__(self,  transformer_name, transformer_settings={}):
-
+    def __init__(self,  transformer_name, transformer_settings=None):
 
         self.transformer_name = transformer_name
         self.transformer_settings = transformer_settings
+        if self.transformer_settings == None:
+            self.transformer_settings = dict()
         self.transformer = None
         self.set_transformer()
 
     def set_transformer(self):
 
-        try:
+        try: # transformer in this module
             self.transformer_type = globals()[self.transformer_name]
             self.transformer = self.transformer_type(**self.transformer_settings)
-        except KeyError:
+        except KeyError: # transformer in sklearn
             self.transformer_type = getattr(sklearn.preprocessing, self.transformer_name)
             self.transformer = self.transformer_type(**self.transformer_settings)
 
+    def __call__(self):
+
+        return self.transformer
+    
 # create custom time transformer 
 class SeasonTransformer(BaseEstimator, TransformerMixin, OneToOneFeatureMixin):
 
@@ -50,24 +56,33 @@ class SeasonTransformer(BaseEstimator, TransformerMixin, OneToOneFeatureMixin):
         Xt = np.sin(2 * np.pi * Xt / self.num_months)        
         return Xt
 
+class Build_ColumnTransformer:
+    
+    def __init__(self, df: pd.DataFrame, transformers: dict):
+        self.df = df
+        self.transformers = transformers
+        self.build()
+    
+    def build(self):
 
-def build_transformation(df, transformers):
+        self.column_transformers = []
+        for k, v in self.transformers.items():
+            name = k.replace('Scaler', '')
+            if 'settings' in v.keys():
+                transformer = TransformerFactory(k.split("_")[0], v['settings'])()
+            else:
+                transformer = TransformerFactory(k.split("_")[0])()
+            features_list = []
+            for fi in v['features']:
+                # for ci in df.columns:
+                #     if (fi + "_") in ci[:len(fi)+1] or fi == ci:
+                #         features_list.append(ci)
+                features_list += make_column_selector(pattern=fi)(self.df)
+            self.column_transformers.append((name, transformer, features_list))
 
-    column_transformers = []
-    for k, v in transformers.items():
-        name = k.replace('Scaler', '')
-        if 'settings' in v.keys():
-            transformer_ins = TransformerFactory(k.split("_")[0], v['settings'])
-        else:
-            transformer_ins = TransformerFactory(k.split("_")[0])
-        transformer = transformer_ins.transformer
-        features_list = []
-        for fi in v['features']:
-            for ci in df.columns:
-                if (fi + "_") in ci[:len(fi)+1] or fi == ci:
-                    features_list.append(ci)
-        column_transformers.append((name, transformer, features_list))
-    return column_transformers
+    def __call__(self, **kwargs):
+
+        return ColumnTransformer(self.column_transformers, **kwargs)
 
 def scale_df(df, transformers):
     df_2 = df.copy()

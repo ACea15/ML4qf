@@ -1,6 +1,8 @@
 import numpy as np
 import itertools
 import pandas as pd
+from collections import namedtuple
+
 # define seed
 def set_seeds(libraries, seed=42):
     for li in libraries:
@@ -59,3 +61,9 @@ def print_keras_layers(model):
                               "Shape": layer.output_shape,
                               "Param": layer.count_params()}, ignore_index=True)
     return table
+
+def create_namedtuple(name, **kwargs):
+
+    NTupled = namedtuple(name, kwargs.keys())
+    ntuple = NTupled(**kwargs)
+    return ntuple

@@ -29,7 +29,7 @@ class Model(BaseEstimator):
     def __init__(self,  keras_model='Sequential', layers=(), seqlen=0, batch_size=None,
                  optimizer_name='adam', loss_name='mse', metrics=None,
                  optimizer_sett=None, compile_sett=None, loss_sett=None,
-                 timeseries_sett=None):
+                 timeseries_sett=None, *args, **kwargs):
         """
 
         Parameters
@@ -56,7 +56,7 @@ class Model(BaseEstimator):
         self.seqlen = seqlen
         self.batch_size = batch_size
         self.loss_name = loss_name
-        self.loss_sett = loss_sett        
+        self.loss_sett = loss_sett
         self.metrics = metrics
         self.optimizer_name = optimizer_name
         self.optimizer_sett = optimizer_sett
@@ -231,7 +231,8 @@ class Model_binary(Model):
 
     def __init__(self,  keras_model='Sequential', layers=(), seqlen=0, batch_size=None,
                  optimizer_name='adam', loss_name='binary_crossentropy', metrics=None,
-                 optimizer_sett=None, compile_sett=None, loss_sett=None, timeseries_sett=None):
+                 optimizer_sett=None, compile_sett=None, loss_sett=None, timeseries_sett=None,
+                 *args, **kwargs):
 
         super().__init__(keras_model, layers, seqlen, batch_size, optimizer_name,
                          loss_name, metrics, optimizer_sett, compile_sett,
