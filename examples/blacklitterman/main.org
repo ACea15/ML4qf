@@ -1,0 +1,159 @@
+#+TITLE: Portfolio Construction using Black-Litterman Model and Factors
+#+AUTHOR: Alvaro Cea
+#+PROPERTY: header-args :tangle ./main.py :mkdirp yes
+#+LATEX_HEADER: \usepackage[margin=1in]{geometry}
+#+LATEX_HEADER: \usepackage{mathtools}
+
+#+begin_comment
+#+OPTIONS: toc:nil
+#+LATEX_HEADER: \let\oldsection\section
+#+LATEX_HEADER: \renewcommand{\section}{\clearpage\oldsection}
+#+LATEX_HEADER: \let\oldsubsection\subsection
+#+LATEX_HEADER: \renewcommand{\subsection}{\clearpage\oldsubsection}
+#+end_comment
+
+* House keeping :noexport:
+#+begin_src elisp :results none :tangle no :exports none
+  (add-to-list 'org-structure-template-alist
+  '("sp" . "src python :session py1"))
+  (add-to-list 'org-structure-template-alist
+  '("se" . "src elisp"))
+
+  (setq org-confirm-babel-evaluate nil)
+  (pyvenv-workon "ml4qf")
+  (require 'org-tempo)
+  (setq org-format-latex-options (plist-put org-format-latex-options :scale 2.0))
+  (setq org-latex-pdf-process (list "latexmk -f -synctex=1 -pdf %f"))
+  ;; (setq org-latex-pdf-process (list "latexmk -f -pdf -interaction=nonstopmode -output-directory=%o %f"))
+
+#+end_src
+
+#+begin_src python :session py1 :results none :tangle no :exports none
+  import pandas as pd
+  import yfinance as yf
+  import statsmodels.api as sm
+  import getFamaFrenchFactors as gff
+#+end_src
+
+* Introduction
+** Develop computational tools and external libraries
+- getFamaFrenchFactors
+  gets data for fame french factors from the Kenneth French library
+  https://pypi.org/project/getFamaFrenchFactors/
+** Specifications:
+For risk-free rate, 3M US Treasury from pandas FRED dataset/ECB website
+rates for EUR/some small constant rate/zero rate – all are acceptable.
+Use 2-3 year sample, which means > 500 daily returns.
+* Theory
+** Fama-French factors
+
+It is one of the multi-factor models which is widely used in both academia and industry to estimate the excess return of an investment asset. It is an extension to Capital Asset Pricing Model (CAPM) by adding two additional factors apart from the market risk when estimating the excess returns of an asset. The three factors considered in this model are:
+
+    Market factor (MKT) — Excess market return
+    Size factor (SMB) — Excess return with a small market cap over those with a large market cap
+    Value factor (HML) — Excess return of value stocks over growth stocks.
+
+The Fama-French model is widely known as a stock market benchmark to evaluate investment performance.
+
+** Black-Litterman model
+
+$$
+\mu_{eq} = \lambda \Sigma w_{mkt}
+$$
+
+- $\mu_{eq}$ is the Implied Excess Equilibrium Return Vector 
+- $\lambda$ is the risk aversion coefficient, $\lambda = \frac{E(\mu) - \mu_r}{\sigma^2}$
+- $\Sigma$ is the covariance matrix of excess returns
+- $w_{mkt}$ are market capitalization weights
+
+$$
+E[\mu_{bl}] = \left[(\tau \Sigma)^{-1} + P'\Omega^{-1}P\right]^{-1} \left[(\tau \Sigma)^{-1}\mu_{eq} + P'\Omega^{-1}Q\right]  
+$$
+
+- $E[\mu_{bl}]$: Posterior combined return vector ($N\times a$)
+- $\tau$: error in views
+- $P$: Matrix identifying assets involved in the views ($K\times N$)
+- $Q$: View vector ($K\times 1$)
+- $\Omega$: Diagonal covariance matrix with the errors expressed in the views ($N\times N$). 
+
+Normal distributions:
+
+- Prior equilibrium distribution: $N(\mu_{eq}, \tau \Sigma)$
+- Views distribution: $N(Q, \Omega)$
+- New combined return distribution: $N\left(E[\mu_{bl}], \left[(\tau \Sigma)^{-1} + P'\Omega^{-1}P\right]^{-1} \right)$
+** Optimisation
+
+- Minimise Mean variance
+- Maximize Sharpe ratio
+- Hierarchical Risk Parity (HRP)   
+
+* Results
+** Portfolio and Factor analysis
+*** Asset selection
+*** Factor collection
+#+begin_src python :session py1 :results none :exports none
+  ticker = 'msft'
+  start = '2016-8-31'
+  end = '2021-8-31'
+
+  stock_data = yf.download(ticker, start, end)
+
+  ff3_monthly = gff.famaFrench3Factor(frequency='m')
+  #ff5_monthly = gff.famaFrench5Factor(frequency='m')
+  #momentum_monthly = gff.momentumFactor(frequency='m')
+
+  ff3_monthly.rename(columns={"date_ff_factors": 'Date'}, inplace=True)
+  ff3_monthly.set_index('Date', inplace=True)
+
+  stock_returns = stock_data['Adj Close'].resample('M').last().pct_change().dropna()
+  stock_returns.name = "Month_Rtn"
+  ff_data = ff3_monthly.merge(stock_returns,on='Date')
+
+  X = ff_data[['Mkt-RF', 'SMB', 'HML']]
+  y = ff_data['Month_Rtn'] - ff_data['RF']
+  X = sm.add_constant(X)
+  ff_model = sm.OLS(y, X).fit()
+#+end_src
+#+begin_src python :session py1 :results output :exports results
+  print(ff_model.summary())
+#+end_src
+
+#+RESULTS:
+#+begin_example
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                      y   R-squared:                       0.608
+Model:                            OLS   Adj. R-squared:                  0.587
+Method:                 Least Squares   F-statistic:                     28.98
+Date:                Mon, 31 Jul 2023   Prob (F-statistic):           1.92e-11
+Time:                        12:17:30   Log-Likelihood:                 126.50
+No. Observations:                  60   AIC:                            -245.0
+Df Residuals:                      56   BIC:                            -236.6
+Df Model:                           3                                         
+Covariance Type:            nonrobust                                         
+==============================================================================
+                 coef    std err          t      P>|t|      [0.025      0.975]
+------------------------------------------------------------------------------
+const          0.0155      0.004      3.671      0.001       0.007       0.024
+Mkt-RF         0.8628      0.094      9.194      0.000       0.675       1.051
+SMB           -0.3160      0.152     -2.084      0.042      -0.620      -0.012
+HML           -0.3282      0.109     -3.022      0.004      -0.546      -0.111
+==============================================================================
+Omnibus:                        2.381   Durbin-Watson:                   2.596
+Prob(Omnibus):                  0.304   Jarque-Bera (JB):                1.661
+Skew:                           0.160   Prob(JB):                        0.436
+Kurtosis:                       3.750   Cond. No.                         39.9
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+#+end_example
+
+*** P&L and backtesting
+** Black-Litterman implementation
+*** Prior and posterior returns construction
+*** Views on
+*** Covariance treatment
+*** Portfolio weights optimisation
+*** Analysis and discussion
+*** Performance comparison
