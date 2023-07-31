@@ -5,9 +5,7 @@ import ml4qf.predictors.model_keras as model_keras
 sklearn_engines = ["neighbors", "neural_network", "semi_supervised", "svm",
                    "tree", "ensemble", "naive_bayes"]
 
-class Model_factory:
-
-    def __init__(self, library, engine_type, engine, engine_settings):
+def model_factory(library, engine_type, engine, engine_settings) -> obj:
         """Build sklearn models on demand.
 
         Parameters
@@ -23,29 +21,19 @@ class Model_factory:
 
 
         """
-        self.library = library
-        self.engine_type = engine_type
-        self.engine = engine
-        self.engine_settings = engine_settings
-        self.model = None
-        self.build()
-        
-    def build(self):
 
-        if self.library == 'keras':
-            Model_keras = getattr(model_keras, self.engine_type)
-            self.model = Model_keras(**self.engine_settings)
-            self.engine = 'keras'
-        elif self.library == 'scikit':
-            module = importlib.import_module(f'sklearn.{self.engine_type}')
-            engine_class = getattr(module, self.engine)
-            self.model = engine_class(**self.engine_settings)
+        if library == 'keras':
+            Model_keras = getattr(model_keras, engine_type)
+            model = Model_keras(**engine_settings)
+            engine = 'keras'
+        elif library == 'scikit':
+            module = importlib.import_module(f'sklearn.{engine_type}')
+            engine_class = getattr(module, engine)
+            model = engine_class(**engine_settings)
         else:
-            raise NameError("library %s not implemented" % self.library)
+            raise NameError("library %s not implemented" % library)
 
-    def __call__(self):
-
-        return self.model
+        return model
 
 class Model(abc.ABC):
     """ """

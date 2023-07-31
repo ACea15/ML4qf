@@ -1,6 +1,6 @@
 #+PROPERTY: header-args :tangle ./airbus.py :mkdirp yes
 * House keeping
-#+begin_src elisp :results none :tangle no :exports none
+#+begin_src elisp :results none :tangle no 
   (add-to-list 'org-structure-template-alist
   '("sp" . "src python :session py1"))
   (add-to-list 'org-structure-template-alist
@@ -9,12 +9,12 @@
   (setq org-confirm-babel-evaluate nil)
 #+end_src
 
-#+begin_src emacs-lisp  :session py1 :results none :tangle nil :exports none
+#+begin_src emacs-lisp  :session py1 :results none :tangle nil 
   (pyvenv-workon "qfpy")
   (require 'org-tempo)
 #+end_src
 
-#+begin_src python  :session py1 :results none :exports none
+#+begin_src python  :session py1 :results none 
   ##############################################################################
   # Add ml4qf library to python path.                                          #
   #                                                                            #
@@ -28,7 +28,7 @@
 #+end_src
 
 * Import libraries
-#+BEGIN_SRC python :session py1 :results output silent :exports none
+#+BEGIN_SRC python :session py1 :results output silent 
 
   ################################
   # Import libraries and modules #
@@ -71,7 +71,7 @@
   importlib.reload(config)
 #+END_SRC
 
-#+begin_src python :session py1 :results none :exports none
+#+begin_src python :session py1 :results none 
   #######################################
   # Set random seed for keras and numpy #
   #######################################
@@ -79,11 +79,7 @@
 #+end_src
 * Introduction
 * Feature engineering
-:PROPERTIES:
-:header-args: :exports none
-:END:
-
-#+begin_src python :session py1 :results none :exports none
+#+begin_src python :session py1
   
   data = ml4qf.collectors.financial_features.FinancialData(config.TICKER,
                                                            config.YEAR0,
@@ -99,7 +95,7 @@
 #+end_src
 
 
-#+begin_src python :session py1 :results none :exports none
+#+begin_src python :session py1 :results none 
 
   own_features = list(df_.columns[:df_.columns.get_loc('volume_')+1])
   pa_features = list(df_.columns[df_.columns.get_loc('volume_') + 1:df_.columns.get_loc('OHLC4')+1])
@@ -118,7 +114,7 @@
 ** Exploratory data analysis
 
 
-#+begin_src python :session py1 :results file :exports none
+#+begin_src python :session py1 :results file 
   fig1_path= img_dir +'/stock_Close.png'
   fig1 = px.line(df_, y=['Ret_1d', 'Ret_5d', 'Ret_15d'])
   fig1.write_image(fig1_path)
@@ -130,7 +126,7 @@
 
 *** Correlation
 
-#+begin_src python :session py1 :results file :exports none
+#+begin_src python :session py1 :results file 
   fig1_path= img_dir +'/correlation.png'
   df_corr = df_.corr().round(2)
   fig1 = px.imshow(np.abs(df_corr))
@@ -339,9 +335,7 @@ dtype: float64
 
 #+end_src
 
-#+RESULTS:
-
-** COMMENT Base line model
+** Base line model
 #+begin_src python :session py1
   layers_dict = dict()
   ############
