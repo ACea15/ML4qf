@@ -23,6 +23,7 @@ setup(
     install_requires=[
         "MiniSom",
         "QuantStats",
+        "beautifulsoup4",
         "cufflinks",
         "getFamaFrenchFactors",
         "h5py",
@@ -37,6 +38,7 @@ setup(
         "plotly",
         "pydot",
         "pyfolio-reloaded",
+        "requests",
         "scikeras",
         "scipy",
         "seaborn",

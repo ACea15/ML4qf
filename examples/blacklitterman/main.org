@@ -44,6 +44,8 @@
 For risk-free rate, 3M US Treasury from pandas FRED dataset/ECB website
 rates for EUR/some small constant rate/zero rate – all are acceptable.
 Use 2-3 year sample, which means > 500 daily returns.
+** Index selection
+The S&P 500 is considered a better reflection of the market’s performance across all sectors compared to the Nasdaq Composite and the Dow
 * Theory
 ** Fama-French factors
 
@@ -157,3 +159,9 @@ Notes:
 *** Portfolio weights optimisation
 *** Analysis and discussion
 *** Performance comparison
+sss
+
+
+#+LaTeX: \appendix
+* Code execution
+The codes herein have been tested in linux (Ubuntu 22 and Centos 8) and in MacOs
