@@ -1,8 +1,10 @@
 import pandas as pd
 import yfinance as yf
+
 import statsmodels.api as sm
 import getFamaFrenchFactors as gff
-
+from datetime import date
+import  numpy as np
 # ### read data
 # ticker = 'msft'
 # start = '2016-8-31'
@@ -10,36 +12,67 @@ import getFamaFrenchFactors as gff
 
 # stock_data = yf.download(ticker, start, end)
 
-# ff3_monthly = gff.famaFrench3Factor(frequency='m')
-# #ff5_monthly = gff.famaFrench5Factor(frequency='m')
-# #momentum_monthly = gff.momentumFactor(frequency='m')
+ff3_monthly = gff.famaFrench3Factor(frequency='m')
+ff5_monthly = gff.famaFrench5Factor(frequency='m')
+#momentum_monthly = gff.momentumFactor(frequency='m')
 
-# ff3_monthly.rename(columns={"date_ff_factors": 'Date'}, inplace=True)
-# ff3_monthly.set_index('Date', inplace=True)
+ff3_monthly.rename(columns={"date_ff_factors": 'Date'}, inplace=True)
+ff3_monthly.set_index('Date', inplace=True)
 
-# stock_returns = stock_data['Adj Close'].resample('M').last().pct_change().dropna()
-# stock_returns.name = "Month_Rtn"
-# ff_data = ff3_monthly.merge(stock_returns,on='Date')
+stock_returns = stock_data['Adj Close'].resample('M').last().pct_change().dropna()
+stock_returns.name = "Month_Rtn"
+ff_data = ff3_monthly.merge(stock_returns,on='Date')
 
-# #### calculate betas
-# X = ff_data[['Mkt-RF', 'SMB', 'HML']]
-# y = ff_data['Month_Rtn'] - ff_data['RF']
-# X = sm.add_constant(X)
-# ff_model = sm.OLS(y, X).fit()
-# print(ff_model.summary())
-# intercept, b1, b2, b3 = ff_model.params
+#### calculate betas
+X = ff_data[['Mkt-RF', 'SMB', 'HML']]
+y = ff_data['Month_Rtn'] - ff_data['RF']
+X = sm.add_constant(X)
+ff_model = sm.OLS(y, X).fit()
+print(ff_model.summary())
+intercept, b1, b2, b3 = ff_model.params
 
-# ####### expected 
-# rf = ff_data['RF'].mean()
-# market_premium = ff3_monthly['Mkt-RF'].mean()
-# size_premium = ff3_monthly['SMB'].mean()
-# value_premium = ff3_monthly['HML'].mean()
+####### expected 
+rf = ff_data['RF'].mean()
+market_premium = ff3_monthly['Mkt-RF'].mean()
+size_premium = ff3_monthly['SMB'].mean()
+value_premium = ff3_monthly['HML'].mean()
 
-# expected_monthly_return = rf + b1 * market_premium + b2 * size_premium + b3 * value_premium 
-# expected_yearly_return = expected_monthly_return * 12
-# print("Expected yearly return: " + str(expected_yearly_return))
+expected_monthly_return = rf + b1 * market_premium + b2 * size_premium + b3 * value_premium 
+expected_yearly_return = expected_monthly_return * 12
+print("Expected yearly return: " + str(expected_yearly_return))
 
+FACTORS = ["famaFrench5Factor", "momentumFactor"]
 
+def get_factors(factors: list[str], frequency: str):
+    df = None
+    for fi in factors:
+        obj_fi = getattr(gff, fi)
+        df_fi = obj_fi(frequency=frequency)
+        df_fi.rename(columns={"date_ff_factors": 'Date'}, inplace=True)
+        df_fi.set_index('Date', inplace=True)
+        if df is None:
+            df = df_fi
+        else:
+            df = df.join(df_fi)
+    return df
+
+def trim_df_date(df, start_date=None, end_date=None):
+    if start_date is not None:
+        start = np.where(df.index == start_date)[0][0]
+    else:
+        start = None
+    if end_date is not None:
+        end = np.where(df.index == end_date)[0][0]
+    else:
+        end = None
+    df = df.iloc[start:end]
+    return df
+
+df_factors = get_factors(FACTORS, 'm')
+df_factors =  trim_df_date(df_factors, start_date='1999-12-31', end_date='2021-01-31')
+
+ff3_monthly.rename(columns={"date_ff_factors": 'Date'}, inplace=True)
+ff3_monthly.set_index('Date', inplace=True)
 
 
 # tickers_list = ["aapl", "goog", "amzn", "BAC", "BA"] # example list
@@ -114,7 +147,7 @@ tickers_info.sort_values('marketCap',ascending=False, inplace=True)
 import random
 print(random.randint(5, 10))
 
-def select_assets(df_sorted, percentages: dict[str:int]):
+def select_assets(df_sorted, percentages: dict[str:tuple]):
 
     num_total_assets = len(df_sorted)
     sectors = []

@@ -33,6 +33,7 @@
   import yfinance as yf
   import statsmodels.api as sm
   import getFamaFrenchFactors as gff
+  import pathlib
 #+end_src
 
 * Introduction
@@ -152,6 +153,15 @@ Notes:
 #+end_example
 
 *** P&L and backtesting
+#+begin_src python :session py1 :results file
+  img_dir = "./img/" + data.label
+  pathlib.Path(img_dir).mkdir(parents=True, exist_ok=True)
+  fig1_path= img_dir +'/stock_Close.png'
+  fig1 = px.line(df_, y=['Ret_1d', 'Ret_5d', 'Ret_15d'])
+  fig1.write_image(fig1_path)
+  fig1_path
+
+#+end_src
 ** Black-Litterman implementation
 *** Prior and posterior returns construction
 *** Views on
