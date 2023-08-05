@@ -1,89 +1,71 @@
 import numpy as np
 
+class BlackLitterman:
 
-def black_litterman(
-    expected_market_returns,
-    market_covariance_matrix,
-    investor_views,
-    view_confidence,
-    omega,
-    tau,
-):
-    """
-    Black-Litterman Portfolio Optimization Model
+    def __init__(self, lambda_portfolio, Sigma, Pi):
 
-    :param expected_market_returns: Expected returns of the market (M x 1 numpy array)
-    :param market_covariance_matrix: Covariance matrix of market returns (M x M numpy array)
-    :param investor_views: Investor views (P x M numpy array)
-    :param view_confidence: View confidences (P x P diagonal numpy array)
-    :param omega: Uncertainty matrix of views (P x P diagonal numpy array)
-    :param tau: Scalar for the identity matrix adjustment (float)
-    :return: Optimal portfolio weights (M x 1 numpy array)
-    """
+        self.lambda_portfolio = lambda_portfolio
+        self.Sigma = Sigma
+        self.Pi = Pi
+        self.portfolio_settings = dict()
 
-    M = len(expected_market_returns)
-    P = len(investor_views)
+    def compute_Sigma_inv(self):
+        self.Sigma_inv = np.linalg.inv(self.Sigma)
+        
+    def compute_w_mkt(self):
+        self.w_mkt = 1./self.lambda_portfolio * self.Sigma_inv * self.Pi
 
-    # Calculate the implied equilibrium returns and covariance matrix
-    tau_inverse = np.linalg.inv(tau * market_covariance_matrix)
-    Pi = tau_inverse.dot(expected_market_returns)
-    Omega = (
-        np.diag(np.diag(view_confidence.dot(tau_inverse).dot(view_confidence.T)))
-        + omega
-    )
+    def set_portfolio_settings(self, Omega=None, tau=None, P=None, Q=None):
 
-    # Calculate the Black-Litterman expected returns and covariance matrix
-    view_transposed = investor_views.T
-    P_transpose = view_transposed.shape[0]
+        if Omega is not None:
+            self._set_Omega(Omega)
+        if tau is not None:
+            self._set_tau(tau)
+        if P is not None:
+            self._set_P(P)
+        if Q is not None:
+            self._set_Q(Q)
+        self.update_posterior = True
+        assert self.tau is not None, "tau needs to not be None"
+        assert self.P is not None, "P needs to not be None"
+        assert self.Q is not None, "Q needs to not be None"
+        if Omega is None:
+            self._set_Omega(self.tau * self.P @ self.Sigma @ self.P.T) # dafault
+            
+    def _set_Omega(self, Omega):
+        self.portfolio_settings['Omega'] = Omega
+        self._Omega = Omega
+        self.Omega_inv = np.linalg.inv(Omega)
+    
+    def _set_tau(self, tau):
+        self.portfolio_settings['tau'] = tau
+        self.tau = tau
+    
+    def _set_P(self, P):
+        self.portfolio_settings['P'] = P
+        self.P = P
+    
+    def _set_Q(self, Q):
+        self.portfolio_settings['Q'] = Q
+        self.Q = Q
+        
+    def compute_BLposterior(self):
+        tauSigma_inv = 1./self.tau * self.Sigma_inv
+        Pt = self.P.T
+        self.Sigma_bl = np.linalg.inv(Pt @ self.Omega_inv @ self.P
+                                      + tauSigma_inv)
+        self.mu_bl = self.Sigma_bl @ (Pt @ self.Omega_inv @ self.Q
+                                      + tauSigma_inv @ self.Pi)
+        self.update_posterior = False
+        
+    def compute_w_bl(self):
 
-    M_inverse = np.linalg.inv(market_covariance_matrix)
-    middle_term = M_inverse + P_transpose * (view_confidence.T).dot(
-        np.linalg.inv(Omega)
-    ).dot(view_confidence)
-    adjusted_returns = np.linalg.inv(middle_term).dot(
-        M_inverse.dot(Pi)
-        + P_transpose
-        * np.linalg.inv(Omega)
-        .dot(investor_views.T)
-        .dot(np.linalg.inv(Omega))
-        .dot(expected_market_returns)
-    )
-
-    # Calculate the optimal portfolio weights using the adjusted returns and covariance matrix
-    tau_inverse_adjusted = np.linalg.inv(tau * market_covariance_matrix)
-    w_optimal = tau_inverse_adjusted.dot(adjusted_returns)
-
-    return w_optimal
-
-
-def eql_returns():
-    ...
-def mu_posterior():
-    ...
+        if self.update_posterior:
+            self.compute_BLposterior()
+        self.w_bl = (1./self.lambda_portfolio *
+                     np.linalg.inv(self.Sigma_inv +
+                                   self.Sigma_bl_inv) @ self.mu_bl)
     
 
-# Example usage
 if __name__ == "__main__":
-    expected_market_returns = np.array(
-        [0.08, 0.12, 0.10]
-    )  # Example expected returns for 3 assets
-    market_covariance_matrix = np.array(
-        [[0.03, 0.005, 0.01], [0.005, 0.02, 0.015], [0.01, 0.015, 0.04]]
-    )  # Example covariance matrix for 3 assets
-    investor_views = np.array([[0.02, 0.02, 0.02]])  # Example investor views
-    view_confidence = np.array([[0.005]])  # Example view confidence
-    omega = np.diag(
-        np.diag(investor_views.T.dot(view_confidence).dot(investor_views))
-    )  # Example uncertainty matrix of views
-    tau = 0.05  # Example scalar for the identity matrix adjustment
-
-    optimal_weights = black_litterman(
-        expected_market_returns,
-        market_covariance_matrix,
-        investor_views,
-        view_confidence,
-        omega,
-        tau,
-    )
-    print("Optimal Portfolio Weights:")
-    print(optimal_weights)
+    ...
