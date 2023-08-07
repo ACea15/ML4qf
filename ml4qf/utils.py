@@ -67,3 +67,15 @@ def create_namedtuple(name, **kwargs):
     NTupled = namedtuple(name, kwargs.keys())
     ntuple = NTupled(**kwargs)
     return ntuple
+
+def trim_df_date(df, start_date=None, end_date=None):
+    if start_date is not None:
+        start = np.where(df.index == start_date)[0][0]
+    else:
+        start = None
+    if end_date is not None:
+        end = np.where(df.index == end_date)[0][0]
+    else:
+        end = None
+    df = df.iloc[start:end]
+    return df

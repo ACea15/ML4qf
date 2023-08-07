@@ -38,6 +38,7 @@ setup(
         "plotly",
         "pydot",
         "pyfolio-reloaded",
+        "pytest",
         "requests",
         "scikeras",
         "scipy",
