@@ -64,7 +64,7 @@ class BlackLitterman:
             self.compute_BLposterior()
         self.w_bl = (1./self.lambda_portfolio *
                      np.linalg.inv(self.Sigma_inv +
-                                   self.Sigma_bl_inv) @ self.mu_bl)
+                                   self.Sigma_bl) @ self.mu_bl)
     
 
 if __name__ == "__main__":
