@@ -2,20 +2,25 @@ import numpy as np
 
 class BlackLitterman:
 
-    def __init__(self, lambda_portfolio, Sigma, Pi):
+    def __init__(self, lambda_portfolio, Sigma, w_mkt, lambda_mkt=None):
 
         self.lambda_portfolio = lambda_portfolio
         self.Sigma = Sigma
-        self.Pi = Pi
+        self.w_mkt = w_mkt
         self.portfolio_settings = dict()
-
+        if lambda_mkt is None:
+            self.lambda_mkt = lambda_portfolio
+        else:
+            self.lambda_mkt = lambda_mkt
+        self.compute_Sigma_inv()
+        
     def compute_Sigma_inv(self):
         self.Sigma_inv = np.linalg.inv(self.Sigma)
         
-    def compute_w_mkt(self):
-        self.w_mkt = 1./self.lambda_portfolio * self.Sigma_inv * self.Pi
+    def compute_mu_mkt(self):
+        self.mu_mkt = self.lambda_mkt * self.Sigma @ self.w_mkt
 
-    def set_portfolio_settings(self, Omega=None, tau=None, P=None, Q=None):
+    def set_portfolio_inputs(self, tau=None, P=None, Q=None, Omega=None):
 
         if Omega is not None:
             self._set_Omega(Omega)
@@ -30,11 +35,13 @@ class BlackLitterman:
         assert self.P is not None, "P needs to not be None"
         assert self.Q is not None, "Q needs to not be None"
         if Omega is None:
-            self._set_Omega(self.tau * self.P @ self.Sigma @ self.P.T) # dafault
-            
+            Omega = np.diag(np.diagonal(self.tau * self.P @ self.Sigma @ self.P.T))
+            self._set_Omega(Omega) # dafault
+        self.compute_mu_mkt()
+        self.compute_BLposterior()
     def _set_Omega(self, Omega):
         self.portfolio_settings['Omega'] = Omega
-        self._Omega = Omega
+        self.Omega = Omega
         self.Omega_inv = np.linalg.inv(Omega)
     
     def _set_tau(self, tau):
@@ -55,7 +62,7 @@ class BlackLitterman:
         self.Sigma_bl = np.linalg.inv(Pt @ self.Omega_inv @ self.P
                                       + tauSigma_inv)
         self.mu_bl = self.Sigma_bl @ (Pt @ self.Omega_inv @ self.Q
-                                      + tauSigma_inv @ self.Pi)
+                                      + tauSigma_inv @ self.mu_mkt)
         self.update_posterior = False
         
     def compute_w_bl(self):

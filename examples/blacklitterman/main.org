@@ -13,7 +13,7 @@
 #+end_comment
 
 * House keeping :noexport:
-#+begin_src elisp :results none :tangle no :exports none
+#+begin_src elisp :results none :exports none
   (add-to-list 'org-structure-template-alist
   '("sp" . "src python :session py1"))
   (add-to-list 'org-structure-template-alist
@@ -28,12 +28,16 @@
 
 #+end_src
 
-#+begin_src python :session py1 :results none :tangle no :exports none
+#+begin_src python :session py1 :tangle yes :results none :exports none
   import pandas as pd
   import yfinance as yf
   import statsmodels.api as sm
   import getFamaFrenchFactors as gff
   import pathlib
+  import importlib
+  import ml4qf
+  import config
+  importlib.reload(config)
 #+end_src
 
 * Introduction
@@ -92,7 +96,32 @@ Normal distributions:
 
 * Results
 ** Portfolio and Factor analysis
+:PROPERTIES:
+:header-args: :session py1
+:END:
+
 *** Asset selection
+#+begin_src python :tangle yes
+  tickers_sp500 = ml4q.collectors.scrap_tickers_index(config.index_weblist)
+  tickers_info = ml4q.collectors.get_tickers_info(tickers_sp500,
+                                                  config.info_sp500)
+  tickers_info.dropna(inplace=True)
+  tickers_info.sort_values('marketCap',ascending=False, inplace=True)
+
+  selected_tickers = select_assets(tickers_info,
+                                   config.ASSET_SELECTION)
+  df_gff = ml4q.collectors.get_factors(config.FACTORS.keys(), 'm')
+  df_gff =  ml4q.utils.trim_df_date(df_factors, start_date=config.start_date,
+                                    end_date=config.end_date)
+  factor_names = ml4q.collectors.get_factor_names(config.FACTORS)
+  factor_models = ml4q.collectors.factors_regression(factor_names,
+                                                     df_gff,
+                                                     df_assets,
+                                                     regression_kernel=regression_OLS)
+  alpha, beta = compute_factors_coeff(factor_models)
+  factor_model = factor_lin_generator(alpha, beta)
+
+#+end_src
 *** Factor collection
 #+begin_src python :session py1 :results none :exports none
   ticker = 'msft'
