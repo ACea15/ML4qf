@@ -102,14 +102,22 @@ Normal distributions:
 
 *** Asset selection
 #+begin_src python :tangle yes
-  tickers_sp500 = ml4q.collectors.scrap_tickers_index(config.index_weblist)
-  tickers_info = ml4q.collectors.get_tickers_info(tickers_sp500,
+  tickers_sp500 = ml4qf.collectors.scrap_tickers_index(config.index_weblist)
+  tickers_info = ml4qf.collectors.get_tickers_info(tickers_sp500,
                                                   config.info_sp500)
   tickers_info.dropna(inplace=True)
   tickers_info.sort_values('marketCap',ascending=False, inplace=True)
 
   selected_tickers = select_assets(tickers_info,
                                    config.ASSET_SELECTION)
+  FinancialDataContainer
+
+#+end_src
+
+#+RESULTS:
+
+*** Factor collection
+#+begin_src python :tangle yes
   df_gff = ml4q.collectors.get_factors(config.FACTORS.keys(), 'm')
   df_gff =  ml4q.utils.trim_df_date(df_factors, start_date=config.start_date,
                                     end_date=config.end_date)
@@ -122,30 +130,9 @@ Normal distributions:
   factor_model = factor_lin_generator(alpha, beta)
 
 #+end_src
-*** Factor collection
-#+begin_src python :session py1 :results none :exports none
-  ticker = 'msft'
-  start = '2016-8-31'
-  end = '2021-8-31'
 
-  stock_data = yf.download(ticker, start, end)
 
-  ff3_monthly = gff.famaFrench3Factor(frequency='m')
-  #ff5_monthly = gff.famaFrench5Factor(frequency='m')
-  #momentum_monthly = gff.momentumFactor(frequency='m')
 
-  ff3_monthly.rename(columns={"date_ff_factors": 'Date'}, inplace=True)
-  ff3_monthly.set_index('Date', inplace=True)
-
-  stock_returns = stock_data['Adj Close'].resample('M').last().pct_change().dropna()
-  stock_returns.name = "Month_Rtn"
-  ff_data = ff3_monthly.merge(stock_returns,on='Date')
-
-  X = ff_data[['Mkt-RF', 'SMB', 'HML']]
-  y = ff_data['Month_Rtn'] - ff_data['RF']
-  X = sm.add_constant(X)
-  ff_model = sm.OLS(y, X).fit()
-#+end_src
 #+begin_src python :session py1 :results output :exports results
   print(ff_model.summary())
 #+end_src
