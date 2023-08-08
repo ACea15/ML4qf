@@ -79,7 +79,7 @@ class Model(BaseEstimator):
         # Check that X and y have correct shape
         X, y = check_X_y(X, y)
         # Store the classes seen during fit
-        self.classes_ = unique_labels(y)
+        #self.classes_ = unique_labels(y)
         self.n_features_in_ = X.shape[1]        
         self.build()
         self.set_callbacks()
@@ -102,6 +102,15 @@ class Model(BaseEstimator):
                                                 **kwargs
                                                 )
         return self
+
+    def predict(self, X):
+        
+        self.Xpred_generated_ = self.split_data(X, self.seqlen)
+        # self.Xpred_generated_ = tf_sequence.TimeseriesGenerator(X,
+        #                                                         y,
+        #                                                         length=self.seqlen)
+        ypred = self._model.predict(self.Xpred_generated_)
+        return ypred
 
     @staticmethod
     def split_data(X_in, n_steps, y_in=None):

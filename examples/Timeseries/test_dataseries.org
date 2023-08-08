@@ -1,4 +1,4 @@
-#+PROPERTY: header-args :tangle ./airbus.py :mkdirp yes
+#+PROPERTY: header-args :tangle ./test_dataseries.py :mkdirp yes
 * House keeping
 #+begin_src elisp :results none :tangle no :exports none
   (add-to-list 'org-structure-template-alist
@@ -7,24 +7,8 @@
   '("se" . "src elisp"))
 
   (setq org-confirm-babel-evaluate nil)
-#+end_src
-
-#+begin_src emacs-lisp  :session py1 :results none :tangle nil :exports none
-  (pyvenv-workon "qfpy")
-  (require 'org-tempo)
-#+end_src
-
-#+begin_src python  :session py1 :results none :exports none
-  ##############################################################################
-  # Add ml4qf library to python path.                                          #
-  #                                                                            #
-  # Preferable to do export PYTHONPATH="$PYTHONPATH:{path}" from command line  #
-  ##############################################################################
-
-  import sys
-  import pathlib
-  file_path = sys.path[1]
-  sys.path.append(file_path + "/../")
+  (pyvenv-workon "ml4qf")
+  (require 'org-tempo)  
 #+end_src
 
 * Import libraries
@@ -38,7 +22,6 @@
   import pathlib
   import yfinance as yf
   from tabulate import tabulate
-  import yaml
   # from umap import UMAP
   # import matplotlib.pyplot as plt
   # from mpl_toolkits.mplot3d import Axes3D
@@ -66,7 +49,7 @@
   import ml4qf.transformers
   import ml4qf.predictors.model_keras as model_keras
   import ml4qf.predictors.model_tuning
-  from ml4qf.predictors.models import Model_factory  
+  from ml4qf.predictors.models import model_factory  
   import config
   import importlib
   importlib.reload(config)
@@ -136,7 +119,7 @@
 
 #+begin_src python :session py1
   #######################
-  base_model = Model_factory('keras', 'Model', None, config.lstm)()
+  base_model = model_factory('keras', 'Model', None, config.lstm)
 
   #base_model.set_params(**winner)
   base_model.fit(Xtrain, ytrain, epochs=100, verbose=2)
@@ -155,15 +138,13 @@
 
 *** Classification
 #+begin_src python :session py1 :results output
-  ypred_basemodel = base_model.predict(Xtest, ytest)#.reshape(len(y_test[SEQ_LEN-1:]))
-  test_report = sklearn.metrics.classification_report(base_model.ypred_generated_, 
+  ypred_basemodel = base_model.predict(Xtest)#.reshape(48)
+  test_report = sklearn.metrics.classification_report(ytest.reshape((48, 1)), 
                                                       ypred_basemodel, output_dict=True)
   dftest_report = pd.DataFrame(test_report).transpose()
   print(dftest_report)
 
 #+end_src
-
-#+RESULTS:
 
 
 #+begin_src python :session py1
