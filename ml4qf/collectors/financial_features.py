@@ -8,30 +8,104 @@ from datetime import date
 from collections import defaultdict
 import yfinance as yf
 import pandas_ta as ta
+import pathlib
+import ml4qf.utils
 
+def get_ticker_dates(year0=None,
+                     month0=None,
+                     day0=None,
+                     year1=None,
+                     month1=None,
+                     day1=None,
+                     num_days=None
+                     ):
+    
+    if (bool(year0) & bool(month0) & bool(day0) & bool(num_days)):
+        date_start = date(year0, month0, day0)
+        date_end = date_start + timedelta(**{"days": num_days})
+    elif (bool(year1) & bool(month1) & bool(day1) & bool(num_days)):
+        date_end = date(year1, month1, day1)
+        date_start = date_end - timedelta(**{"days": num_days})
+    elif (bool(year0) & bool(month0) & bool(day0) &
+          bool(year1) & bool(month1) & bool(day1)):
+        date_end = date(year1, month1, day1)
+        date_start = date(year0, month0, day0)
+    else:
+        raise ValueError("Wrong dates input to get_data")
+    return date_start, date_end
 
-class FinancialData:
+class APIs_get_data:
+
+    @staticmethod
+    def data_yf_download(ticker,
+                         date_start,
+                         date_end,
+                         interval,
+                         *args, **kwargs):
+
+        df = yf.download(
+            ticker,
+            start=date_start,
+            end=date_end,
+            interval=interval,
+            ignore_tz=True)
+        print("***** Loading data from Yahoo Finance *****")
+        return df
+
+class FinancialDataContainer:
+    
     def __init__(
-        self,
-        TICKER,
-        YEAR0,
-        MONTH0,
-        DAY0,
-        NUM_DAYS,
-        FEATURES,
-        PRICE="Close",
-        df=None,
-        **kwargs,
-    ):
+            self,
+            TICKERS: list[str],
+            START_DATE,
+            END_DATE,
+            INTERVAL='1d',
+            DATA_FOLDER=None,
+            FEATURES=None,
+            PRICE="Close",
+            *args,
+            **kwargs):
+        
+        for ti in TICKERS:
+            financial_data = FinancialData(ti,
+                                           START_DATE,
+                                           END_DATE,
+                                           INTERVAL,
+                                           DATA_FOLDER,
+                                           FEATURES,
+                                           PRICE
+                                           )
+            setattr(self,
+                    ml4qf.utils.clean(ti),
+                    financial_data
+                    )
+    
+class FinancialData:
+    
+    def __init__(
+            self,
+            TICKER,
+            START_DATE,
+            END_DATE,
+            INTERVAL='1d',
+            DATA_FOLDER=None,
+            FEATURES=None,
+            PRICE="Close",
+            df=None,
+            *args,
+            **kwargs):
+        
         if df is None:
-            self.df, self.label = self.get_data(
-                TICKER, YEAR0, MONTH0, DAY0, NUM_DAYS, label="FD"
-            )
+            self.df = self.get_data(TICKER,
+                                    START_DATE,
+                                    END_DATE,
+                                    INTERVAL,
+                                    DATA_FOLDER)
             self.df["price"] = self.df[PRICE]
             self.add_returns()
         else:
             self.df = df
-        if len(FEATURES) > 0:
+        if FEATURES is not None:
             self.features = FeaturesPrice(self.df, **FEATURES)
 
     def add_returns(self, log_return=True):
@@ -47,55 +121,38 @@ class FinancialData:
         return cls(inputs, df.copy())
 
     @staticmethod
-    def get_data(ticker, year, month, day, num_days, interval="1d", label=None):
-        """
+    def get_data(ticker,
+                 date_start,
+                 date_end,
+                 interval='1d',
+                 data_folder=None,
+                 api_name="yf_download",
+                 save_data=True,
+                 *args, **kwargs):
 
-
-        Parameters
-        ----------
-        ticker :
-
-        year :
-
-        month :
-
-        day :
-
-        num_days :
-
-
-        Returns
-        -------
-        out :
-
-        """
-        date_end = date(year, month, day)
-        date_start = date_end - timedelta(**{"days": num_days})
-        data_folder = os.getcwd() + "/data"
-        data_file = data_folder + f"/{ticker}_{date_start}_{date_end}"
-
-        if not os.path.isdir(data_folder):
-            print("***** Creating data folder *****")
-            os.makedirs(data_folder)
-        if os.path.isfile(data_file):
-            print("***** Loading data from csv file *****")
-            df = pd.read_csv(data_file, index_col=0, parse_dates=True)
+        if data_folder is not None:
+            folder_path = pathlib.Path(data_folder)
+            if not folder_path.is_dir():
+                print("***** Creating data folder *****")
+                folder_path.mkdir(parents=True, exist_ok=True)
+            data_file = folder_path / f"{ticker}_{date_start}_{date_end}"
+            if data_file.is_file():
+                print("***** Loading data from csv file *****")
+                df = pd.read_csv(data_file, index_col=0, parse_dates=True)
+                return df
         else:
-            print("***** Loading data from Yahoo Finance *****")
-            df = yf.download(
-                ticker,
-                start=date_start,
-                end=date_end,
+            api = getattr(APIs_get_data, f"data_{api_name}")
+            df = api(
+                ticker=ticker,
+                date_start=date_start,
+                date_end=date_end,
                 interval=interval,
-                ignore_tz=True,
+                *args, **kwargs
             )
-            df.to_csv(data_file)
-        if label is None:
             return df
-        else:
-            out_label = f"_{ticker}_{date_start}_{date_end}"
-            return df, out_label
-
+        if save_data:
+            df.to_csv(data_file)
+        return df
 
 class FeaturesPrice:
     """Creates financial features using arbitrary rolling windows."""
