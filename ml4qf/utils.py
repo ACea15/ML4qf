@@ -3,6 +3,18 @@ import itertools
 import pandas as pd
 from collections import namedtuple
 
+import re
+
+def clean(s):
+
+   # Remove invalid characters
+   s = re.sub('[^0-9a-zA-Z_]', '', s)
+
+   # Remove leading characters until we find a letter or underscore
+   s = re.sub('^[^a-zA-Z_]+', '', s)
+
+   return s
+
 # define seed
 def set_seeds(libraries, seed=42):
     for li in libraries:

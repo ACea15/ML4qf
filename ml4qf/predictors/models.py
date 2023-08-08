@@ -5,7 +5,7 @@ import ml4qf.predictors.model_keras as model_keras
 sklearn_engines = ["neighbors", "neural_network", "semi_supervised", "svm",
                    "tree", "ensemble", "naive_bayes"]
 
-def model_factory(library, engine_type, engine, engine_settings) -> obj:
+def model_factory(library, engine_type, engine, engine_settings):
         """Build sklearn models on demand.
 
         Parameters
@@ -25,7 +25,6 @@ def model_factory(library, engine_type, engine, engine_settings) -> obj:
         if library == 'keras':
             Model_keras = getattr(model_keras, engine_type)
             model = Model_keras(**engine_settings)
-            engine = 'keras'
         elif library == 'scikit':
             module = importlib.import_module(f'sklearn.{engine_type}')
             engine_class = getattr(module, engine)
