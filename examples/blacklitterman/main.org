@@ -36,8 +36,11 @@
   import pathlib
   import importlib
   import ml4qf
+  import plotly.express as px
   import config
   importlib.reload(config)
+  img_dir = "./img/" + data.label
+  pathlib.Path(img_dir).mkdir(parents=True, exist_ok=True)
 #+end_src
 
 * Introduction
@@ -51,6 +54,15 @@ rates for EUR/some small constant rate/zero rate – all are acceptable.
 Use 2-3 year sample, which means > 500 daily returns.
 ** Index selection
 The S&P 500 is considered a better reflection of the market’s performance across all sectors compared to the Nasdaq Composite and the Dow
+
+#+begin_comment
+#+CAPTION: Modal shape 1 
+#+ATTR_LATEX: :width 0.75\textwidth
+#+ATTR_ORG: :width 100
+[[./img/polimi-M0.png]]
+#+end_comment
+
+
 * Theory
 ** Fama-French factors
 
@@ -97,11 +109,11 @@ Normal distributions:
 * Results
 ** Portfolio and Factor analysis
 :PROPERTIES:
-:header-args: :session py1
+:header-args: :session py1 :tangle yes
 :END:
 
 *** Asset selection
-#+begin_src python :tangle yes :results none
+#+begin_src python  :results none
   tickers_sp500 = ml4qf.collectors.scrap_tickers_index(config.index_weblist)
   tickers_info = ml4qf.collectors.get_tickers_info(tickers_sp500,
                                                    config.info_sp500,
@@ -136,12 +148,40 @@ AIZ     0.002353
 Name: marketCap, dtype: float64
 #+end_example
 
-#+begin_src python :tangle yes :results none
+*** Assets exploratory analysis
+#+begin_src python  :results none
   fdc = financial_features.FinancialDataContainer(df_selected_tickers.index,
                                                   "1999-12-31",
                                                   "2020-01-05",
                                                   '1mo')
 #+end_src
+
+
+#+NAME: baseline_flutter_vgvf
+#+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
+  fig1_path= './img/stock_Close.png'
+  fig1 = px.line(df_, y=['Ret_1d', 'Ret_5d', 'Ret_15d'])
+  fig1.write_image(fig1_path)
+  fig1_path
+#+end_src
+
+#+CAPTION: Vg-Vf graph baseline configuration 
+#+ATTR_LATEX: :width 0.75\textwidth 
+
+
+#+NAME: baseline_flutter_vgvf
+#+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
+  fig1_path= img_dir +'/correlation.png'
+  df_corr = df_.corr().round(2)
+  fig1 = px.imshow(np.abs(df_corr))
+  fig1.layout.height = 600
+  fig1.layout.width = 600
+  fig1.write_image(fig1_path)
+  fig1_path
+#+end_src
+
+#+CAPTION: Vg-Vf graph baseline configuration 
+#+ATTR_LATEX: :width 0.75\textwidth 
 
 
 
