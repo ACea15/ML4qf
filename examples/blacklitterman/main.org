@@ -101,36 +101,72 @@ Normal distributions:
 :END:
 
 *** Asset selection
-#+begin_src python :tangle yes
+#+begin_src python :tangle yes :results none
   tickers_sp500 = ml4qf.collectors.scrap_tickers_index(config.index_weblist)
   tickers_info = ml4qf.collectors.get_tickers_info(tickers_sp500,
-                                                  config.info_sp500)
+                                                   config.info_sp500,
+                                                   data_folder="./data",
+                                                   name_family="sp500")
   tickers_info.dropna(inplace=True)
   tickers_info.sort_values('marketCap',ascending=False, inplace=True)
+  df_selected_tickers = ml4qf.collectors.select_assets(tickers_info,
+                                                    config.ASSET_SELECTION_PCT,
+                                                    config.ASSET_SELECTION_NAMES)
+  #FinancialDataContainer
+  w_mkt = df_selected_tickers.marketCap / df_selected_tickers.marketCap.sum()
+#+end_src
 
-  selected_tickers = select_assets(tickers_info,
-                                   config.ASSET_SELECTION)
-  FinancialDataContainer
-
+- Market cap equilibrium weights
+#+begin_src python :tangle yes :results output 
+  print(w_mkt)
+  #w_mkt = w_mkt.to_numpy()
 #+end_src
 
 #+RESULTS:
+#+begin_example
+AAPL    0.874871
+MCD     0.065405
+FDX     0.020846
+HAL     0.011103
+CSGP    0.010348
+AEE     0.006609
+CAG     0.004608
+MTCH    0.003858
+AIZ     0.002353
+Name: marketCap, dtype: float64
+#+end_example
 
-*** Factor collection
-#+begin_src python :tangle yes
-  df_gff = ml4q.collectors.get_factors(config.FACTORS.keys(), 'm')
-  df_gff =  ml4q.utils.trim_df_date(df_factors, start_date=config.start_date,
-                                    end_date=config.end_date)
-  factor_names = ml4q.collectors.get_factor_names(config.FACTORS)
-  factor_models = ml4q.collectors.factors_regression(factor_names,
-                                                     df_gff,
-                                                     df_assets,
-                                                     regression_kernel=regression_OLS)
-  alpha, beta = compute_factors_coeff(factor_models)
-  factor_model = factor_lin_generator(alpha, beta)
-
+#+begin_src python :tangle yes :results none
+  fdc = financial_features.FinancialDataContainer(df_selected_tickers.index,
+                                                  "1999-12-31",
+                                                  "2020-01-05",
+                                                  '1mo')
 #+end_src
 
+
+
+*** Factor collection
+#+begin_src python :tangle yes :results none
+  df_factors = ml4qf.collectors.get_factors(config.FACTORS.keys(), 'm')
+  df_gff =  ml4qf.utils.trim_df_date(df_factors, start_date=config.start_date,
+                                     end_date=config.end_date)
+  factor_names = ml4qf.collectors.get_factor_names(config.FACTORS)
+#+end_src
+
+*** Factor regression
+#+begin_src python :tangle yes :results none
+  df_gff = ml4qf.collectors.get_factors(config.FACTORS.keys(), 'm')
+  df_gff =  ml4qf.utils.trim_df_date(df_factors, start_date=config.start_date,
+                                     end_date=config.end_date)
+  factor_names = ml4qf.collectors.get_factor_names(config.FACTORS)
+  factor_models = ml4qf.collectors.factors_regression(factor_names,
+                                                      df_gff,
+                                                      df_assets,
+                                                      regression_kernel=regression_OLS)
+  alpha, beta = ml4qf.collectors.compute_factors_coeff(factor_models)
+  factor_model = ml4qf.collectors.factor_lin_generator(alpha, beta)
+
+#+end_src
 
 
 #+begin_src python :session py1 :results output :exports results

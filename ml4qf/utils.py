@@ -91,3 +91,10 @@ def trim_df_date(df, start_date=None, end_date=None):
         end = None
     df = df.iloc[start:end]
     return df
+
+def split_df_date(df, split_date):
+    split = np.where(df.index == split_date)[0][0]
+    df1 = df.iloc[:split]
+    df2 = df.iloc[split:]
+    return df1, df2
+

@@ -65,7 +65,7 @@ class FinancialDataContainer:
             PRICE="Close",
             *args,
             **kwargs):
-        
+
         for ti in TICKERS:
             financial_data = FinancialData(ti,
                                            START_DATE,
@@ -79,7 +79,7 @@ class FinancialDataContainer:
                     ml4qf.utils.clean(ti),
                     financial_data
                     )
-    
+
 class FinancialData:
     
     def __init__(
