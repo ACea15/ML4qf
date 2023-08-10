@@ -66,7 +66,8 @@ class FinancialDataContainer:
             *args,
             **kwargs):
 
-        for ti in TICKERS:
+        self.tickers = []
+        for i, ti in enumerate(TICKERS):
             financial_data = FinancialData(ti,
                                            START_DATE,
                                            END_DATE,
@@ -79,6 +80,28 @@ class FinancialDataContainer:
                     ml4qf.utils.clean(ti),
                     financial_data
                     )
+            build_df = True
+            self.tickers.append(ml4qf.utils.clean(ti))
+            if i == 0:
+                self.index = financial_data.df.index
+            else:
+                try:
+                    same_index = (financial_data.df.index == self.index).all()
+                    assert same_index, f"{ti} not coincident index with {TICKERS[0]}"
+                except ValueError:
+                    print(f"{ti} index is different length")
+                    build_df = False
+        if build_df:
+            self.build_df()
+        
+    def build_df(self, name='df', column="returns"):
+
+        df_dict = dict()
+        for ti in self.tickers:
+            df_i = getattr(self, ti).df
+            column_i = df_i[column]
+            df_dict[ti] = column_i
+        setattr(self, name, pd.DataFrame(df_dict, index=self.index))
 
 class FinancialData:
     
@@ -140,6 +163,15 @@ class FinancialData:
                 print("***** Loading data from csv file *****")
                 df = pd.read_csv(data_file, index_col=0, parse_dates=True)
                 return df
+            else:
+                api = getattr(APIs_get_data, f"data_{api_name}")
+                df = api(
+                    ticker=ticker,
+                    date_start=date_start,
+                    date_end=date_end,
+                    interval=interval,
+                    *args, **kwargs
+                )
         else:
             api = getattr(APIs_get_data, f"data_{api_name}")
             df = api(

@@ -10,7 +10,7 @@ import statsmodels.api as sm
 import getFamaFrenchFactors as gff
 from datetime import date
 from functools import partial
-
+import numpy as np
 
 def get_factors(factor_names: list[str], frequency: str):
     df = None
@@ -33,14 +33,16 @@ def get_factor_names(factors):
             factor_names.append(v)
         elif isinstance(v, list):
             factor_names += v
+    return factor_names
 
 def factors_regression(factor_names, df_gff, df_assets, regression_kernel):
 
     df_factors = df_gff[factor_names]
     X = sm.add_constant(df_factors)
+    X = X.to_numpy()
     models = dict()
     for k, rets in df_assets.items():
-        y = rets - df_gff['RF']
+        y = rets.to_numpy() - df_gff['RF'].to_numpy()
         model_k = regression_kernel(X, y)
         models[k] = model_k
     return models
@@ -59,9 +61,10 @@ def compute_factors_coeff(models):
     return alpha, beta
 
 def factor_lin_model(X, alpha, beta):
-
+    
     return X @ beta + alpha
 
 def factor_lin_generator(alpha, beta):
 
     return partial(factor_lin_model, alpha=alpha, beta=beta)
+

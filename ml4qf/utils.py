@@ -2,7 +2,7 @@ import numpy as np
 import itertools
 import pandas as pd
 from collections import namedtuple
-
+import datetime
 import re
 
 def clean(s):
@@ -92,9 +92,29 @@ def trim_df_date(df, start_date=None, end_date=None):
     df = df.iloc[start:end]
     return df
 
-def split_df_date(df, split_date):
-    split = np.where(df.index == split_date)[0][0]
+def split_df_date(df, split_date=None, split_index=None):
+    if split_date is not None:
+        split = np.where(df.index == split_date)[0][0]
+    elif split_index is not None:
+        split = split_index
     df1 = df.iloc[:split]
     df2 = df.iloc[split:]
     return df1, df2
 
+def date_filter_lower(df, column, date_lower=None):
+
+    date2keep = []
+    if date_lower is not None:
+        date_lower = datetime.datetime.strptime(date_lower,
+                                                '%Y-%m-%d')
+    for i, ti in enumerate(df[column]):
+        try:
+            date_i = datetime.datetime.strptime(ti, '%Y-%m-%d')
+        except TypeError:
+            continue
+        if date_lower is None:
+            date2keep.append(i)
+        elif date_i < date_lower:
+            date2keep.append(i)
+    df_out = df.iloc[date2keep]
+    return df_out

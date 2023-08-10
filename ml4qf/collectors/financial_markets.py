@@ -26,6 +26,7 @@ def get_tickers_info(tickers: list[str],
                      ):
 
     tickers_info = {k: [] for k in info}
+    tickers_info["first_date"] = []
     data_file = None
     if data_folder is not None:
         folder_path = pathlib.Path(data_folder)
@@ -41,6 +42,13 @@ def get_tickers_info(tickers: list[str],
         try:
             ticker_object = yf.Ticker(i_ticker)
             #time.sleep(0.5)
+            try:
+                timestamp0 = ticker_object.history(start="1900-01-01",
+                                                   interval='1mo').index[0]
+                tickers_info["first_date"].append(
+                    f"{timestamp0.year}-{timestamp0.month}-{timestamp0.day}")
+            except:
+                tickers_info["first_date"].append(float("nan"))
             for i_info in info:
                 try:
                     tickers_info[i_info].append(ticker_object.info[i_info])
@@ -71,13 +79,16 @@ def select_assets(df_sorted,
             bucket_k = int(num_total_assets * v[0])
             bucket[k] = bucket_k
             assets_bucket = 0
+            counter = 0
             while assets_bucket < v[1]:
                 index = random.randint(bucket_total,
-                                       bucket_total + bucket_k)
-                if (seci := df_sorted.iloc[index].sector) not in sectors:
+                                       bucket_total + bucket_k -1)
+                seci = df_sorted.iloc[index].sector
+                if seci not in sectors or counter > 100:
                     indexes.append(index)
                     assets_bucket += 1
                     sectors.append(seci)
+                counter += 1
             bucket_total += bucket_k
         df_out = df_sorted.iloc[indexes].sort_values('marketCap', ascending=False)
     return df_out
