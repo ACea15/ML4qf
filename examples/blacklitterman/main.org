@@ -30,6 +30,7 @@
 
 #+begin_src python :session py1 :tangle yes :results none :exports none
   import pandas as pd
+  import numpy as np
   import yfinance as yf
   import statsmodels.api as sm
   import getFamaFrenchFactors as gff
@@ -126,7 +127,7 @@ Normal distributions:
   df_tickers_sp500.dropna(inplace=True)
   df_tickers_filtered = ml4qf.utils.date_filter_lower(df_tickers_sp500,
                                                 'first_date',
-                                                date_lower=config.start_date)
+                                                date_lower=config.start_date_assets)
   df_tickers_filtered =  df_tickers_filtered.sort_values('marketCap',ascending=False)
   df_selected_tickers = ml4qf.collectors.select_assets(df_tickers_filtered,
                                                        config.ASSET_SELECTION_PCT,
@@ -148,15 +149,15 @@ Normal distributions:
 
 #+RESULTS:
 #+begin_example
-ORCL    0.523191
-MO      0.134133
-APD     0.108042
-PAYX    0.076214
-WMB     0.073205
-DRI     0.033826
-REG     0.019230
-DVA     0.017111
-PNW     0.015048
+UNH     0.522293
+MCD     0.233716
+ETN     0.096325
+COF     0.046844
+IT      0.029819
+SBAC    0.027697
+CNP     0.020226
+TAP     0.015441
+CMA     0.007640
 Name: marketCap, dtype: float64
 #+end_example
 
@@ -172,23 +173,47 @@ Name: marketCap, dtype: float64
                                                    split_index=config.split_data_idx)
 #+end_src
 
+#+NAME: df_assets
+#+begin_src python :session py1 :results raw :exports results
+  tabulate(df_assets.iloc[:10], headers=df_assets.columns,showindex=True, tablefmt='orgtbl')
+#+end_src
 
-#+NAME: baseline_flutter_vgvf
+#+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption  
+#+RESULTS: df_assets
+|                     |         UNH |         MCD |        ETN |        COF |         IT |        SBAC |        CNP |         TAP |         CMA |
+|---------------------+-------------+-------------+------------+------------+------------+-------------+------------+-------------+-------------|
+| 2016-08-01 00:00:00 |  -0.0499301 |  -0.0169146 |  0.0493613 |  0.0673822 | -0.0922693 | -0.00739129 | -0.0606188 |  0.00156613 |   0.0453139 |
+| 2016-09-01 00:00:00 |   0.0290334 | -0.00259384 | -0.0124737 | 0.00321234 |  -0.028022 |  -0.0174332 |  0.0338229 |    0.073104 | 0.000634358 |
+| 2016-10-01 00:00:00 |  0.00950001 |  -0.0241852 | -0.0295236 |  0.0307671 |  -0.027247 |  0.00998569 | -0.0185106 |  -0.0545538 |    0.100803 |
+| 2016-11-01 00:00:00 |    0.120215 |   0.0595185 |  0.0429669 |   0.135062 |   0.195026 |   -0.126412 |  0.0464913 |  -0.0556786 |    0.223843 |
+| 2016-12-01 00:00:00 |    0.010864 |   0.0205417 | 0.00872041 |  0.0380771 |   -0.01702 |   0.0434519 |  0.0326906 |  -0.0073447 |   0.0683922 |
+| 2017-01-01 00:00:00 |   0.0128719 |  0.00698323 |  0.0550008 | 0.00171941 |  -0.016919 |   0.0193686 |  0.0637175 | -0.00811839 | -0.00851566 |
+| 2017-02-01 00:00:00 |   0.0202344 |   0.0414457 |   0.016954 |  0.0740359 |   0.038748 |   0.0998479 |  0.0423503 |   0.0400953 |   0.0555309 |
+| 2017-03-01 00:00:00 | -0.00828401 |   0.0153545 |  0.0301472 |   -0.07671 |  0.0463133 |    0.039734 | 0.00915081 |  -0.0466182 |  -0.0378787 |
+| 2017-04-01 00:00:00 |   0.0662765 |   0.0796234 |  0.0200944 | -0.0724672 |  0.0564867 |   0.0508432 |  0.0348205 |  0.00188068 |   0.0309127 |
+| 2017-05-01 00:00:00 |  0.00171539 |   0.0783249 |  0.0230037 | -0.0430455 |  0.0482952 |   0.0924183 | 0.00280406 |  -0.0114715 |  -0.0302687 |
+
+
+
+#+NAME: basket_returns
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
-  fig1_path= './img/stock_Close.png'
-  fig1 = px.line(df_, y=['Ret_1d', 'Ret_5d', 'Ret_15d'])
+  fig1_path= img_dir + f'{name}.png'
+  fig1 = px.line(df_assets, y=df_assets.keys())
   fig1.write_image(fig1_path)
   fig1_path
 #+end_src
 
-#+CAPTION: Vg-Vf graph baseline configuration 
+#+CAPTION:  Asset's basket returns
 #+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: basket_returns
+[[file:./img/basket_returns.png]]
 
 
-#+NAME: baseline_flutter_vgvf
+
+#+NAME: AssetsCorrelation
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
-  fig1_path= img_dir +'/correlation.png'
-  df_corr = df_.corr().round(2)
+  fig1_path= img_dir + f'{name}.png'
+  df_corr = df_assets.corr().round(2)
   fig1 = px.imshow(np.abs(df_corr))
   fig1.layout.height = 600
   fig1.layout.width = 600
@@ -196,8 +221,10 @@ Name: marketCap, dtype: float64
   fig1_path
 #+end_src
 
-#+CAPTION: Vg-Vf graph baseline configuration 
+#+CAPTION: Assets correlation
 #+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: AssetsCorrelation
+[[file:./img//AssetsCorrelation.png]]
 
 
 
