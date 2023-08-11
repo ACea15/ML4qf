@@ -28,5 +28,6 @@ end_date_assets = "2021-08-01"
 start = datetime.datetime.strptime(start_date_assets, "%Y-%m-%d")
 end = datetime.datetime.strptime(end_date_assets, "%Y-%m-%d")
 days = (end - start).days
-train_test_ratio = 0.8
+train_test_ratio = 0.7
 split_data_idx = int(train_test_ratio * days * 12 / 365)
+

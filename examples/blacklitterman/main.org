@@ -42,15 +42,21 @@
   import ml4qf.collectors.financial_factors as financial_factors
   import ml4qf.collectors.financial_markets as financial_markets
   from ml4qf.predictors.model_stats import regression_OLS
+  import ml4qf.predictors.model_stats as model_stats
+  from tabulate import tabulate
   import plotly.express as px
+  import plotly.graph_objects as go
+  import matplotlib.pyplot as plt
+  from pandas.plotting import autocorrelation_plot
   import config
   importlib.reload(config)
-  img_dir = "./img/"
-  pathlib.Path(img_dir).mkdir(parents=True, exist_ok=True)
+  img_dir = pathlib.Path("./img/")
+  #img_dir = img_dir0.absolute()
+  img_dir.mkdir(parents=True, exist_ok=True)
 #+end_src
 
 * Introduction
-** Develop computational tools and external libraries
+** Implemented computational tools and external libraries
 - getFamaFrenchFactors
   gets data for fame french factors from the Kenneth French library
   https://pypi.org/project/getFamaFrenchFactors/
@@ -79,6 +85,36 @@ It is one of the multi-factor models which is widely used in both academia and i
 
 The Fama-French model is widely known as a stock market benchmark to evaluate investment performance.
 
+$$
+E[r_a] = \mu_a + \beta E[r_f]  + \epsilon_a
+$$
+
+$$
+Var[r_a] = \mu_a + \beta r_f  + \epsilon_a
+$$
+
+$$
+\Pi = w_a^{\top} r_a
+$$
+
+$$
+Var(\Pi) = Var(r_a^{\top} w_a) = Var(r_a^{\top} w_a)
+$$
+
+** ARIMA model for time series
+AutoRegressive Integrated Moving Average (ARIMA) statistical models are used 
+AR: Autoregression. A model that uses the dependent relationship between an observation and some number of lagged observations.
+I: Integrated. The use of differencing of raw observations (e.g. subtracting an observation from an observation at the previous time step) in order to make the time series stationary.
+MA: Moving Average. A model that uses the dependency between an observation and a residual error from a moving average model applied to lagged observations.
+
+Each of these components are explicitly specified in the model as a parameter. A standard notation is used of ARIMA(p,d,q) where the parameters are substituted with integer values to quickly indicate the specific ARIMA model being used.
+
+The parameters of the ARIMA model are defined as follows:
+
+- p: Number of lags in the observations that included in the model.
+- d: Number of times differencing is applied to the observations.
+- q: Size of moving average window.
+
 ** Black-Litterman model
 
 $$
@@ -86,7 +122,7 @@ $$
 $$
 
 - $\mu_{eq}$ is the Implied Excess Equilibrium Return Vector 
-- $\lambda$ is the risk aversion coefficient, $\lambda = \frac{E(\mu) - \mu_r}{\sigma^2}$
+- $\lambda$ is the risk aversion coefficient, \lambda = \frac{E(\mu) - \mu_r}{\sigma^2}$
 - $\Sigma$ is the covariance matrix of excess returns
 - $w_{mkt}$ are market capitalization weights
 
@@ -105,6 +141,7 @@ Normal distributions:
 - Prior equilibrium distribution: $N(\mu_{eq}, \tau \Sigma)$
 - Views distribution: $N(Q, \Omega)$
 - New combined return distribution: $N\left(E[\mu_{bl}], \left[(\tau \Sigma)^{-1} + P'\Omega^{-1}P\right]^{-1} \right)$
+  
 ** Optimisation
 
 - Minimise Mean variance
@@ -116,7 +153,6 @@ Normal distributions:
 :PROPERTIES:
 :header-args: :session py1 :tangle yes
 :END:
-
 *** Asset selection
 #+begin_src python  :results none
   tickers_sp500 = ml4qf.collectors.scrap_tickers_index(config.index_weblist)
@@ -149,15 +185,15 @@ Normal distributions:
 
 #+RESULTS:
 #+begin_example
-UNH     0.522293
-MCD     0.233716
-ETN     0.096325
-COF     0.046844
-IT      0.029819
-SBAC    0.027697
-CNP     0.020226
-TAP     0.015441
-CMA     0.007640
+GOOGL    0.824353
+WFC      0.080190
+EL       0.029705
+F        0.025470
+XYL      0.012251
+FE       0.010367
+VTRS     0.006752
+GEN      0.006681
+FRT      0.004231
 Name: marketCap, dtype: float64
 #+end_example
 
@@ -171,27 +207,30 @@ Name: marketCap, dtype: float64
   df_assets = fdc.df.dropna()
   df_assets_train, df_assets_test = ml4qf.utils.split_df_date(df_assets,
                                                    split_index=config.split_data_idx)
+  asset_names = list(df_assets.columns)
 #+end_src
 
 #+NAME: df_assets
 #+begin_src python :session py1 :results raw :exports results
-  tabulate(df_assets.iloc[:10], headers=df_assets.columns,showindex=True, tablefmt='orgtbl')
+  tabulate(df_assets.iloc[:10],
+           headers=asset_names,
+           showindex=True,
+           tablefmt='orgtbl')
 #+end_src
 
 #+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption  
 #+RESULTS: df_assets
-|                     |         UNH |         MCD |        ETN |        COF |         IT |        SBAC |        CNP |         TAP |         CMA |
-|---------------------+-------------+-------------+------------+------------+------------+-------------+------------+-------------+-------------|
-| 2016-08-01 00:00:00 |  -0.0499301 |  -0.0169146 |  0.0493613 |  0.0673822 | -0.0922693 | -0.00739129 | -0.0606188 |  0.00156613 |   0.0453139 |
-| 2016-09-01 00:00:00 |   0.0290334 | -0.00259384 | -0.0124737 | 0.00321234 |  -0.028022 |  -0.0174332 |  0.0338229 |    0.073104 | 0.000634358 |
-| 2016-10-01 00:00:00 |  0.00950001 |  -0.0241852 | -0.0295236 |  0.0307671 |  -0.027247 |  0.00998569 | -0.0185106 |  -0.0545538 |    0.100803 |
-| 2016-11-01 00:00:00 |    0.120215 |   0.0595185 |  0.0429669 |   0.135062 |   0.195026 |   -0.126412 |  0.0464913 |  -0.0556786 |    0.223843 |
-| 2016-12-01 00:00:00 |    0.010864 |   0.0205417 | 0.00872041 |  0.0380771 |   -0.01702 |   0.0434519 |  0.0326906 |  -0.0073447 |   0.0683922 |
-| 2017-01-01 00:00:00 |   0.0128719 |  0.00698323 |  0.0550008 | 0.00171941 |  -0.016919 |   0.0193686 |  0.0637175 | -0.00811839 | -0.00851566 |
-| 2017-02-01 00:00:00 |   0.0202344 |   0.0414457 |   0.016954 |  0.0740359 |   0.038748 |   0.0998479 |  0.0423503 |   0.0400953 |   0.0555309 |
-| 2017-03-01 00:00:00 | -0.00828401 |   0.0153545 |  0.0301472 |   -0.07671 |  0.0463133 |    0.039734 | 0.00915081 |  -0.0466182 |  -0.0378787 |
-| 2017-04-01 00:00:00 |   0.0662765 |   0.0796234 |  0.0200944 | -0.0724672 |  0.0564867 |   0.0508432 |  0.0348205 |  0.00188068 |   0.0309127 |
-| 2017-05-01 00:00:00 |  0.00171539 |   0.0783249 |  0.0230037 | -0.0430455 |  0.0482952 |   0.0924183 | 0.00280406 |  -0.0114715 |  -0.0302687 |
+|       |        alpha |   Mkt-RF |       SMB |       HML |        RMW |        CMA |        MOM |
+|-------+--------------+----------+-----------+-----------+------------+------------+------------|
+| GOOGL | -0.000952064 |  1.07236 | -0.565035 | 0.0668175 | -0.0528319 |  -0.595556 |  0.0780759 |
+| WFC   |   -0.0081722 | 0.902351 | -0.191378 |   1.32462 |  -0.783329 |   0.109152 | -0.0599507 |
+| EL    |    0.0039333 | 0.699059 | 0.0661193 | -0.134586 |    1.03736 |  -0.965616 |   0.127287 |
+| F     |   -0.0146552 | 0.949502 |  0.289732 |  0.664054 |   0.242592 |  -0.482178 |  -0.118548 |
+| XYL   |   0.00073521 | 0.996759 | -0.224459 |  0.376366 |  -0.319748 |  -0.556019 |  0.0576615 |
+| FE    |  -0.00547268 |  0.10558 | -0.474695 |  0.403655 | -0.0400822 |   -1.46636 |  -0.283889 |
+| VTRS  |    -0.036724 |  1.65107 |  -1.07457 | 0.0386131 |  -0.179789 | -0.0750717 |  -0.384393 |
+| GEN   |   -0.0146047 |  1.71263 |  -1.88557 | -0.284629 |   -2.42119 |   0.425945 |  -0.878873 |
+| FRT   |    -0.015103 | 0.472049 |    0.7014 |  0.307077 |    1.02342 |  -0.345591 |  -0.266933 |
 
 
 
@@ -208,8 +247,6 @@ Name: marketCap, dtype: float64
 #+RESULTS: basket_returns
 [[file:./img/basket_returns.png]]
 
-
-
 #+NAME: AssetsCorrelation
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
   fig1_path= img_dir + f'{name}.png'
@@ -224,9 +261,7 @@ Name: marketCap, dtype: float64
 #+CAPTION: Assets correlation
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: AssetsCorrelation
-[[file:./img//AssetsCorrelation.png]]
-
-
+[[file:./img/AssetsCorrelation.png]]
 
 *** Factor collection
 #+begin_src python :tangle yes :results none
@@ -239,7 +274,7 @@ Name: marketCap, dtype: float64
 #+end_src
 
 *** Factor regression
-#+begin_src python :tangle yes :results none
+#+begin_src python :results none
   factor_models = financial_factors.factors_regression(factor_names,
                                                       df_factors_train,
                                                       df_assets_train,
@@ -248,38 +283,62 @@ Name: marketCap, dtype: float64
   factor_model = financial_factors.factor_lin_generator(alpha, beta)
 #+end_src
 
+#+NAME: df_train_factors
+#+begin_src python  :results raw :exports results
+  albe = np.vstack([alpha, beta]).T
+  df_index = asset_names
+  df_columns = ['alpha'] + factor_names
+  df_train_factors = pd.DataFrame(albe, columns=df_columns, index=df_index)
+  tabulate(df_train_factors, headers=df_columns, showindex=True, tablefmt='orgtbl')
+#+end_src
+
+#+RESULTS: df_train_factors
+|       |        alpha |   Mkt-RF |       SMB |       HML |        RMW |        CMA |        MOM |
+|-------+--------------+----------+-----------+-----------+------------+------------+------------|
+| GOOGL | -0.000952064 |  1.07236 | -0.565035 | 0.0668175 | -0.0528319 |  -0.595556 |  0.0780759 |
+| WFC   |   -0.0081722 | 0.902351 | -0.191378 |   1.32462 |  -0.783329 |   0.109152 | -0.0599507 |
+| EL    |    0.0039333 | 0.699059 | 0.0661193 | -0.134586 |    1.03736 |  -0.965616 |   0.127287 |
+| F     |   -0.0146552 | 0.949502 |  0.289732 |  0.664054 |   0.242592 |  -0.482178 |  -0.118548 |
+| XYL   |   0.00073521 | 0.996759 | -0.224459 |  0.376366 |  -0.319748 |  -0.556019 |  0.0576615 |
+| FE    |  -0.00547268 |  0.10558 | -0.474695 |  0.403655 | -0.0400822 |   -1.46636 |  -0.283889 |
+| VTRS  |    -0.036724 |  1.65107 |  -1.07457 | 0.0386131 |  -0.179789 | -0.0750717 |  -0.384393 |
+| GEN   |   -0.0146047 |  1.71263 |  -1.88557 | -0.284629 |   -2.42119 |   0.425945 |  -0.878873 |
+| FRT   |    -0.015103 | 0.472049 |    0.7014 |  0.307077 |    1.02342 |  -0.345591 |  -0.266933 |
+
+
+
 #+begin_src python :results output :exports results
-  print(factor_models[df_assets.keys()[0]].summary())
+  print(factor_models[df_assets.keys()[1]].summary())
 #+end_src
 
 #+RESULTS:
 #+begin_example
                             OLS Regression Results                            
 ==============================================================================
-Dep. Variable:                      y   R-squared:                       0.520
-Model:                            OLS   Adj. R-squared:                  0.450
-Method:                 Least Squares   F-statistic:                     7.412
-Date:                Thu, 10 Aug 2023   Prob (F-statistic):           2.06e-05
-Time:                        17:18:03   Log-Likelihood:                 90.027
-No. Observations:                  48   AIC:                            -166.1
-Df Residuals:                      41   BIC:                            -153.0
+Dep. Variable:                      y   R-squared:                       0.706
+Model:                            OLS   Adj. R-squared:                  0.663
+Method:                 Least Squares   F-statistic:                     16.43
+Date:                Fri, 11 Aug 2023   Prob (F-statistic):           1.55e-09
+Time:                        10:31:28   Log-Likelihood:                 83.115
+No. Observations:                  48   AIC:                            -152.2
+Df Residuals:                      41   BIC:                            -139.1
 Df Model:                           6                                         
 Covariance Type:            nonrobust                                         
 ==============================================================================
                  coef    std err          t      P>|t|      [0.025      0.975]
 ------------------------------------------------------------------------------
-const         -0.0047      0.006     -0.742      0.462      -0.018       0.008
-x1             0.8822      0.170      5.180      0.000       0.538       1.226
-x2            -0.7053      0.300     -2.354      0.023      -1.310      -0.100
-x3            -0.1531      0.246     -0.623      0.537      -0.649       0.343
-x4            -0.8772      0.537     -1.634      0.110      -1.962       0.207
-x5            -0.2057      0.444     -0.463      0.646      -1.103       0.692
-x6            -0.4871      0.226     -2.159      0.037      -0.943      -0.032
+const         -0.0082      0.007     -1.110      0.273      -0.023       0.007
+x1             0.9024      0.197      4.588      0.000       0.505       1.300
+x2            -0.1914      0.346     -0.553      0.583      -0.890       0.508
+x3             1.3246      0.284      4.667      0.000       0.751       1.898
+x4            -0.7833      0.620     -1.263      0.214      -2.036       0.469
+x5             0.1092      0.513      0.213      0.833      -0.927       1.146
+x6            -0.0600      0.261     -0.230      0.819      -0.586       0.466
 ==============================================================================
-Omnibus:                        1.327   Durbin-Watson:                   2.343
-Prob(Omnibus):                  0.515   Jarque-Bera (JB):                1.196
-Skew:                           0.372   Prob(JB):                        0.550
-Kurtosis:                       2.787   Cond. No.                         98.9
+Omnibus:                        2.682   Durbin-Watson:                   1.687
+Prob(Omnibus):                  0.262   Jarque-Bera (JB):                2.381
+Skew:                          -0.539   Prob(JB):                        0.304
+Kurtosis:                       2.829   Cond. No.                         98.9
 ==============================================================================
 
 Notes:
@@ -352,25 +411,110 @@ Notes:
 
 
 #+begin_src python :tangle yes :results none
-  predicted_return = factor_model(df_factors_test[factor_names].to_numpy())
+  returns_pred = factor_model(df_factors_test[factor_names].to_numpy())
+  df_returns_pred = pd.DataFrame(returns_pred,
+                                 columns=asset_names,
+                                 index=df_assets_test.index)
 #+end_src
 
+*** Factors backtesting
+#+NAME: predicted_returns
+#+begin_src python :var i_asset=0 name=(org-element-property :name (org-element-context))
+  i_asset = i_asset
+  i_name = asset_names[i_asset]
+  fig1_path= img_dir / f'{name}{i_name}.png'
+  fig1 = go.Figure()
+  fig1.add_trace(go.Scatter(
+      x=df_assets_test.index,
+      y=df_assets_test.iloc[:, i_asset] - df_factors_test.RF.to_numpy(),
+      mode='lines+markers',
+      name=f"{i_name} real"))
+  fig1.add_trace(go.Scatter(
+      x=df_assets_test.index,
+      y=df_returns_pred[i_name],
+      mode='lines',
+      name=f"{i_name} pred."))
 
+  #px.line(df_returns_pred['GOOGL'], y=df_returns_pred.keys()[0])
 
-
-*** P&L and backtesting
-#+begin_src python :session py1 :results file
-  img_dir = "./img/" + data.label
-  pathlib.Path(img_dir).mkdir(parents=True, exist_ok=True)
-  fig1_path= img_dir +'/stock_Close.png'
-  fig1 = px.line(df_, y=['Ret_1d', 'Ret_5d', 'Ret_15d'])
   fig1.write_image(fig1_path)
-  fig1_path
+  str(fig1_path)
+#+end_src
 
+#+NAME: predicted_returns0
+#+begin_src python :noweb eval :results value file  :exports results
+  fig_path = "<<predicted_returns(i_asset=0, name="predicted_returns_")>>"
+  fig_path
+#+end_src
+#+CAPTION:  Backtesting factor approximation on Google asset
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: predicted_returns0
+[[file:img/predicted_returns_GOOGL.png]]
+
+#+NAME: predicted_returns1
+#+begin_src python :noweb eval :results value file  :exports results
+  fig_path = "<<predicted_returns(i_asset=1, name="predicted_returns_")>>"
+  fig_path
+#+end_src
+#+CAPTION:  Backtesting factor approaximation on Google asset
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: predicted_returns1
+[[file:img/predicted_returns_WFC.png]]
+
+#+NAME: predicted_returns2
+#+begin_src python :noweb eval :results value file  :exports results
+  fig_path = "<<predicted_returns(i_asset=2, name="predicted_returns_")>>"
+  fig_path
+#+end_src
+#+CAPTION:  Backtesting factor approaximation on Google asset
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: predicted_returns2
+[[file:img/predicted_returns_EL.png]]
+
+#+NAME: predicted_returns3
+#+begin_src python :noweb eval :results value file  :exports results
+  fig_path = "<<predicted_returns(i_asset=3, name="predicted_returns_")>>"
+  fig_path
+#+end_src
+#+CAPTION:  Backtesting factor approaximation on Google asset
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: predicted_returns3
+[[file:img/predicted_returns_F.png]]
+
+** Generation of asset views
+:PROPERTIES:
+:header-args: :session py1 :tangle yes
+:END:
+*** ARIMA model construction
+#+NAME: arima_autocorrelation
+#+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
+  fig1_path= img_dir + f'{name}.png'
+  fig = plt.figure()
+  ax = autocorrelation_plot()
+  #ax.set_title("bleh")
+  #ax.set_xlabel("xlabel")
+  #ax.plot(x, y, 'r--')
+  fig.savefig(fig1_path)
+  fig1_path
+#+end_src
+
+#+begin_src python :results none
+  X = df_factors_train[factor_names].to_numpy()
+  arima_train_models = model_stats.arima_fit(X, factor_names, (2,1,0))
+#+end_src
+
+#+begin_src python :results none
+  arima_train_models['Mkt-RF'].summary()
+#+end_src
+
+*** ARIMA model prediction
+#+begin_src python :results none
+  X = df_factors_train[factor_names].to_numpy()
+  arima_train_models = model_stats.arima_fit(X, factor_names, (2,1,0))
 #+end_src
 
 
-** Black-Litterman implementation
+** Black-Litterman based portfolio
 *** Prior and posterior returns construction
 *** Views on
 *** Covariance treatment
