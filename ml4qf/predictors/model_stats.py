@@ -2,7 +2,7 @@ import statsmodels.api as sm
 from statsmodels.tsa.arima.model import ARIMA
 from sklearn.metrics import mean_squared_error
 import numpy as np
-
+import pandas as pd
 def regression_OLS(X, y):
     model = sm.OLS(y, X)
     model = model.fit()
@@ -15,7 +15,7 @@ def arima_pred(x_train, num_steps, arima_parameters, fit_sett=None):
     predictions = list()
     # walk-forward validation
     for t in range(num_steps):
-        model = ARIMA(history, order=(5,1,0))
+        model = ARIMA(history, order=arima_parameters)
         model_fit = model.fit(**fit_sett)
         output = model_fit.forecast()
         yhat = output[0]
@@ -39,6 +39,22 @@ def arima_fit(X, model_names, arima_parameters, fit_sett=None):
         model_fit = model_k.fit(**fit_sett)
         arima_models[k] = model_fit
     return arima_models
+
+def arima_build_pred(arima_model, Xtrain, Xtest,
+                     model_names, index_train = None, index_test = None):
+
+    train_dict = dict()
+    test_dict = dict()
+    len_train = len(Xtrain)
+    len_test = len(Xtest)    
+    for i, k in enumerate(model_names):
+        train_dict[k] = Xtrain[:, i]
+        train_dict[k+"_pred"] = arima_model.predict(0, len_train-1)
+        test_dict[k] = Xtest[:, i]
+        test_dict[k+"_pred"] = arima_model.predict(len_train, len_train + len_test -1)
+    df_train = pd.DataFrame(train_dict, index=index_train)
+    df_test = pd.DataFrame(test_dict, index=index_test)
+    return df_train, df_test
 
 def err_rmse(y, yhat):
     rmse = np.sqrt(mean_squared_error(y, yhat))

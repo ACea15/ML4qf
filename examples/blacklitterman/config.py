@@ -8,9 +8,9 @@ FACTORS = {"famaFrench5Factor": ['Mkt-RF', 'SMB', 'HML', 'RMW', 'CMA'],
            }
 
 ASSET_SELECTION_PCT = dict(largest=(0.05, 1),
-                           large=(0.25, 2),
-                           medium=(0.4, 3),
-                           small=(0.25, 2),
+                           large=(0.2, 2),
+                           medium=(0.5, 4),
+                           small=(0.2, 2),
                            smallest=(0.05, 1)
                            )
 # ASSET_SELECTION_PCT = dict(largest=(0.05, 1),
