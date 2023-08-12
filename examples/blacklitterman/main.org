@@ -185,15 +185,15 @@ Normal distributions:
 
 #+RESULTS:
 #+begin_example
-GOOGL    0.824353
-WFC      0.080190
-EL       0.029705
-F        0.025470
-XYL      0.012251
-FE       0.010367
-VTRS     0.006752
-GEN      0.006681
-FRT      0.004231
+KO      0.430949
+LOW     0.211659
+GS      0.185425
+ALGN    0.043380
+FICO    0.035078
+DOV     0.032496
+ATO     0.027659
+ESS     0.026347
+DXC     0.007006
 Name: marketCap, dtype: float64
 #+end_example
 
@@ -220,23 +220,24 @@ Name: marketCap, dtype: float64
 
 #+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption  
 #+RESULTS: df_assets
-|       |        alpha |   Mkt-RF |       SMB |       HML |        RMW |        CMA |        MOM |
-|-------+--------------+----------+-----------+-----------+------------+------------+------------|
-| GOOGL | -0.000952064 |  1.07236 | -0.565035 | 0.0668175 | -0.0528319 |  -0.595556 |  0.0780759 |
-| WFC   |   -0.0081722 | 0.902351 | -0.191378 |   1.32462 |  -0.783329 |   0.109152 | -0.0599507 |
-| EL    |    0.0039333 | 0.699059 | 0.0661193 | -0.134586 |    1.03736 |  -0.965616 |   0.127287 |
-| F     |   -0.0146552 | 0.949502 |  0.289732 |  0.664054 |   0.242592 |  -0.482178 |  -0.118548 |
-| XYL   |   0.00073521 | 0.996759 | -0.224459 |  0.376366 |  -0.319748 |  -0.556019 |  0.0576615 |
-| FE    |  -0.00547268 |  0.10558 | -0.474695 |  0.403655 | -0.0400822 |   -1.46636 |  -0.283889 |
-| VTRS  |    -0.036724 |  1.65107 |  -1.07457 | 0.0386131 |  -0.179789 | -0.0750717 |  -0.384393 |
-| GEN   |   -0.0146047 |  1.71263 |  -1.88557 | -0.284629 |   -2.42119 |   0.425945 |  -0.878873 |
-| FRT   |    -0.015103 | 0.472049 |    0.7014 |  0.307077 |    1.02342 |  -0.345591 |  -0.266933 |
+|                     |       AMZN |         LIN |       CDNS |        ACGL |        ALGN |        MKC |        EQT |         AOS |        PNW |
+|---------------------+------------+-------------+------------+-------------+-------------+------------+------------+-------------+------------|
+| 2011-02-01 00:00:00 |  0.0215161 |   0.0681427 |   0.146313 |   0.0254957 | 0.000960176 |  0.0780543 |  0.0230338 |  -0.0562953 |  0.0373373 |
+| 2011-03-01 00:00:00 |  0.0394714 |   0.0223385 | -0.0201005 |    0.096022 |  -0.0177458 | 0.00377755 |  0.0121704 |   0.0975247 |  0.0132607 |
+| 2011-04-01 00:00:00 |  0.0870482 |   0.0474409 |  0.0646154 |   0.0484929 |    0.178711 |  0.0269705 |   0.054509 | -0.00834459 |  0.0140219 |
+| 2011-05-01 00:00:00 | 0.00449422 | -0.00545012 |  0.0298651 |  -0.0270193 |    0.014913 |  0.0217834 |  0.0296465 |  -0.0568569 |  0.0430975 |
+| 2011-06-01 00:00:00 |  0.0396562 |    0.024093 | -0.0121608 |  -0.0536614 |  -0.0693878 |  -0.012353 | -0.0306386 |   0.0200144 | -0.0150242 |
+| 2011-07-01 00:00:00 |  0.0881706 |  -0.0438232 | -0.0217803 |   0.0588973 |  -0.0355263 | -0.0185596 |   0.208682 |  -0.0196217 | -0.0500225 |
+| 2011-08-01 00:00:00 | -0.0327611 |  -0.0496913 |  -0.105518 | -0.00355029 |   -0.131423 | -0.0176773 | -0.0576559 |  -0.0525681 |  0.0446282 |
+| 2011-09-01 00:00:00 | 0.00464612 |  -0.0508681 |          0 |  -0.0296913 |   -0.205759 | -0.0341076 |  -0.107991 |    -0.18478 | -0.0293852 |
+| 2011-10-01 00:00:00 | -0.0125792 |   0.0876123 |   0.198052 |    0.100673 |    0.518128 |  0.0519931 |    0.19003 |    0.160162 |  0.0614812 |
+| 2011-11-01 00:00:00 | -0.0993864 |  0.00324581 | -0.0117435 |   0.0500417 |   0.0638298 | 0.00288302 | -0.0234646 |   0.0565123 |  0.0401491 |
 
 
 
 #+NAME: basket_returns
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
-  fig1_path= img_dir + f'{name}.png'
+  fig1_path= img_dir / f'{name}.png'
   fig1 = px.line(df_assets, y=df_assets.keys())
   fig1.write_image(fig1_path)
   fig1_path
@@ -249,7 +250,7 @@ Name: marketCap, dtype: float64
 
 #+NAME: AssetsCorrelation
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
-  fig1_path= img_dir + f'{name}.png'
+  fig1_path= img_dir / f'{name}.png'
   df_corr = df_assets.corr().round(2)
   fig1 = px.imshow(np.abs(df_corr))
   fig1.layout.height = 600
@@ -261,7 +262,7 @@ Name: marketCap, dtype: float64
 #+CAPTION: Assets correlation
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: AssetsCorrelation
-[[file:./img/AssetsCorrelation.png]]
+[[file:img/AssetsCorrelation.png]]
 
 *** Factor collection
 #+begin_src python :tangle yes :results none
@@ -273,6 +274,32 @@ Name: marketCap, dtype: float64
                                           split_index=config.split_data_idx)
 #+end_src
 
+#+NAME: factors_plot
+#+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
+  fig1_path= img_dir / f'{name}.png'
+  fig1 = px.line(df_factors, y=factor_names)
+  fig1.write_image(fig1_path)
+  fig1_path
+#+end_src
+
+#+CAPTION: Factors evolution
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: factors_plot
+[[file:img/factors_plot.png]]
+
+
+#+NAME: RF_plot
+#+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
+  fig1_path= img_dir / f'{name}.png'
+  fig1 = px.line(df_factors, y='RF')
+  fig1.write_image(fig1_path)
+  fig1_path
+#+end_src
+
+#+CAPTION: Risk free rate evolution
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: RF_plot
+[[file:img/RF_plot.png]]
 *** Factor regression
 #+begin_src python :results none
   factor_models = financial_factors.factors_regression(factor_names,
@@ -293,52 +320,52 @@ Name: marketCap, dtype: float64
 #+end_src
 
 #+RESULTS: df_train_factors
-|       |        alpha |   Mkt-RF |       SMB |       HML |        RMW |        CMA |        MOM |
-|-------+--------------+----------+-----------+-----------+------------+------------+------------|
-| GOOGL | -0.000952064 |  1.07236 | -0.565035 | 0.0668175 | -0.0528319 |  -0.595556 |  0.0780759 |
-| WFC   |   -0.0081722 | 0.902351 | -0.191378 |   1.32462 |  -0.783329 |   0.109152 | -0.0599507 |
-| EL    |    0.0039333 | 0.699059 | 0.0661193 | -0.134586 |    1.03736 |  -0.965616 |   0.127287 |
-| F     |   -0.0146552 | 0.949502 |  0.289732 |  0.664054 |   0.242592 |  -0.482178 |  -0.118548 |
-| XYL   |   0.00073521 | 0.996759 | -0.224459 |  0.376366 |  -0.319748 |  -0.556019 |  0.0576615 |
-| FE    |  -0.00547268 |  0.10558 | -0.474695 |  0.403655 | -0.0400822 |   -1.46636 |  -0.283889 |
-| VTRS  |    -0.036724 |  1.65107 |  -1.07457 | 0.0386131 |  -0.179789 | -0.0750717 |  -0.384393 |
-| GEN   |   -0.0146047 |  1.71263 |  -1.88557 | -0.284629 |   -2.42119 |   0.425945 |  -0.878873 |
-| FRT   |    -0.015103 | 0.472049 |    0.7014 |  0.307077 |    1.02342 |  -0.345591 |  -0.266933 |
+|      |       alpha |   Mkt-RF |        SMB |        HML |       RMW |       CMA |       MOM |
+|------+-------------+----------+------------+------------+-----------+-----------+-----------|
+| KO   | -0.00504705 | 0.715481 |  -0.606405 |   0.253916 |  0.673695 |  0.232055 |  0.255632 |
+| LOW  |  0.00256421 |  1.35459 |   0.424878 |  -0.444549 |  0.163616 |  0.367605 |  0.183704 |
+| GS   | -0.00171691 |  1.26161 |  -0.367694 |    1.10773 |  -1.08038 | -0.779736 |  -0.30657 |
+| ALGN |  0.00812828 |  1.85869 |   0.855478 |  -0.346435 |  0.665934 |  -1.37539 |  0.300928 |
+| FICO |    0.010519 |  1.33782 |   0.491586 |  -0.447025 |  0.409309 | -0.132692 |  0.381129 |
+| DOV  | -0.00119858 |   1.2466 |  0.0759657 |  0.0106195 | 0.0359513 |  0.206847 |  -0.35993 |
+| ATO  |  0.00370247 | 0.532019 | -0.0095945 | -0.0506821 |  0.474951 |  0.772017 |  0.462068 |
+| ESS  | 0.000448892 | 0.597641 |   0.218558 |   0.449575 |  0.268346 | -0.688924 |  0.337749 |
+| DXC  | -0.00824096 |  1.75237 |  -0.341453 |   0.862479 | -0.423773 |  -1.65855 | -0.341152 |
 
 
 
 #+begin_src python :results output :exports results
-  print(factor_models[df_assets.keys()[1]].summary())
+  print(factor_models[df_assets.keys()[2]].summary())
 #+end_src
 
 #+RESULTS:
 #+begin_example
                             OLS Regression Results                            
 ==============================================================================
-Dep. Variable:                      y   R-squared:                       0.706
-Model:                            OLS   Adj. R-squared:                  0.663
-Method:                 Least Squares   F-statistic:                     16.43
-Date:                Fri, 11 Aug 2023   Prob (F-statistic):           1.55e-09
-Time:                        10:31:28   Log-Likelihood:                 83.115
-No. Observations:                  48   AIC:                            -152.2
-Df Residuals:                      41   BIC:                            -139.1
+Dep. Variable:                      y   R-squared:                       0.703
+Model:                            OLS   Adj. R-squared:                  0.686
+Method:                 Least Squares   F-statistic:                     41.78
+Date:                Fri, 11 Aug 2023   Prob (F-statistic):           8.75e-26
+Time:                        22:46:24   Log-Likelihood:                 191.62
+No. Observations:                 113   AIC:                            -369.2
+Df Residuals:                     106   BIC:                            -350.1
 Df Model:                           6                                         
 Covariance Type:            nonrobust                                         
 ==============================================================================
                  coef    std err          t      P>|t|      [0.025      0.975]
 ------------------------------------------------------------------------------
-const         -0.0082      0.007     -1.110      0.273      -0.023       0.007
-x1             0.9024      0.197      4.588      0.000       0.505       1.300
-x2            -0.1914      0.346     -0.553      0.583      -0.890       0.508
-x3             1.3246      0.284      4.667      0.000       0.751       1.898
-x4            -0.7833      0.620     -1.263      0.214      -2.036       0.469
-x5             0.1092      0.513      0.213      0.833      -0.927       1.146
-x6            -0.0600      0.261     -0.230      0.819      -0.586       0.466
+const         -0.0017      0.005     -0.367      0.714      -0.011       0.008
+x1             1.2616      0.129      9.791      0.000       1.006       1.517
+x2            -0.3677      0.222     -1.656      0.101      -0.808       0.072
+x3             1.1077      0.228      4.850      0.000       0.655       1.561
+x4            -1.0804      0.312     -3.466      0.001      -1.698      -0.462
+x5            -0.7797      0.365     -2.136      0.035      -1.504      -0.056
+x6            -0.3066      0.158     -1.943      0.055      -0.619       0.006
 ==============================================================================
-Omnibus:                        2.682   Durbin-Watson:                   1.687
-Prob(Omnibus):                  0.262   Jarque-Bera (JB):                2.381
-Skew:                          -0.539   Prob(JB):                        0.304
-Kurtosis:                       2.829   Cond. No.                         98.9
+Omnibus:                       10.163   Durbin-Watson:                   2.124
+Prob(Omnibus):                  0.006   Jarque-Bera (JB):               23.665
+Skew:                          -0.151   Prob(JB):                     7.26e-06
+Kurtosis:                       5.222   Cond. No.                         91.5
 ==============================================================================
 
 Notes:
@@ -449,7 +476,7 @@ Notes:
 #+CAPTION:  Backtesting factor approximation on Google asset
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: predicted_returns0
-[[file:img/predicted_returns_GOOGL.png]]
+[[file:img/predicted_returns_KO.png]]
 
 #+NAME: predicted_returns1
 #+begin_src python :noweb eval :results value file  :exports results
@@ -469,7 +496,7 @@ Notes:
 #+CAPTION:  Backtesting factor approaximation on Google asset
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: predicted_returns2
-[[file:img/predicted_returns_EL.png]]
+[[file:img/predicted_returns_GS.png]]
 
 #+NAME: predicted_returns3
 #+begin_src python :noweb eval :results value file  :exports results
@@ -479,7 +506,7 @@ Notes:
 #+CAPTION:  Backtesting factor approaximation on Google asset
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: predicted_returns3
-[[file:img/predicted_returns_F.png]]
+[[file:img/predicted_returns_BKR.png]]
 
 ** Generation of asset views
 :PROPERTIES:
@@ -488,15 +515,18 @@ Notes:
 *** ARIMA model construction
 #+NAME: arima_autocorrelation
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
-  fig1_path= img_dir + f'{name}.png'
+  fig1_path= img_dir / f'{name}.png'
   fig = plt.figure()
-  ax = autocorrelation_plot()
+  ax = autocorrelation_plot(df_train_factors['Mkt-RF'])
   #ax.set_title("bleh")
   #ax.set_xlabel("xlabel")
   #ax.plot(x, y, 'r--')
   fig.savefig(fig1_path)
   fig1_path
 #+end_src
+
+#+RESULTS: arima_autocorrelation
+[[file:img/arima_autocorrelation.png]]
 
 #+begin_src python :results none
   X = df_factors_train[factor_names].to_numpy()

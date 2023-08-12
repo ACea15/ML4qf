@@ -18,16 +18,35 @@ ASSET_SELECTION_PCT = dict(largest=(0.05, 1),
 #                            medium=(0.5, 3)
 #                            )
 
+# ASSET_SELECTION_NAMES = ['JPM',
+#                          'NFLX',
+#                          'ANET',
+#                          'PH',  
+#                          'ROST',
+#                          'UDR', 
+#                          'RVTY',
+#                          'CAG',
+#                          'NRG']
+# KO  
+# LOW 
+# GS  
+# ALGN
+# FICO
+# DOV 
+# ATO 
+# ESS 
+# DXC
+
 ASSET_SELECTION_NAMES = None
-start_date_factors = "2016-08-31"
-end_date_factors =  "2021-08-31"
+start_date_factors = "2011-03-31"
+end_date_factors =  "2022-12-31"
 ###
-start_date_assets = "2016-07-01"
-end_date_assets = "2021-08-01"
+start_date_assets = "2011-02-01"
+end_date_assets = "2022-12-01"
 
 start = datetime.datetime.strptime(start_date_assets, "%Y-%m-%d")
 end = datetime.datetime.strptime(end_date_assets, "%Y-%m-%d")
 days = (end - start).days
-train_test_ratio = 0.7
+train_test_ratio = 0.8
 split_data_idx = int(train_test_ratio * days * 12 / 365)
 
