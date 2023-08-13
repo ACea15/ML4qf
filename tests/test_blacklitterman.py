@@ -26,7 +26,7 @@ class TestBL_Seb:
     def init_obj(self, inputs):
 
         (lambda_mkt, w_mkt, Sigma, tau, P, Q) = inputs
-        pf1 = bl.BlackLitterman(1., Sigma, w_mkt, lambda_mkt)
+        pf1 = bl.BlackLitterman(Sigma, w_mkt, lambda_mkt)
         pf1.set_portfolio_inputs(tau, P, Q)
         return pf1
 
@@ -95,7 +95,7 @@ class TestBL_Stauton:
     def init_obj(self, inputs):
 
         (lambda_mkt, w_mkt, Sigma, tau, P, Q) = inputs
-        pf1 = bl.BlackLitterman(1., Sigma, w_mkt, lambda_mkt)
+        pf1 = bl.BlackLitterman(Sigma, w_mkt, lambda_mkt)
         pf1.set_portfolio_inputs(tau, P, Q)
         return pf1
 

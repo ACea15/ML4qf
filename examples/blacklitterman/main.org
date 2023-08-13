@@ -43,6 +43,7 @@
   import ml4qf.collectors.financial_markets as financial_markets
   from ml4qf.predictors.model_stats import regression_OLS
   import ml4qf.predictors.model_stats as model_stats
+  import ml4qf.portfolios.blacklitterman as bl
   from tabulate import tabulate
   import plotly.express as px
   import plotly.graph_objects as go
@@ -151,8 +152,9 @@ Normal distributions:
 * Results
 ** Portfolio and Factor analysis
 :PROPERTIES:
-:header-args: :session py1 :tangle yes
+:header-args: :session py1 :tangle yes :comments org
 :END:
+
 *** Asset selection
 #+begin_src python  :results none
   tickers_sp500 = ml4qf.collectors.scrap_tickers_index(config.index_weblist)
@@ -172,8 +174,8 @@ Normal distributions:
   w_mkt = df_selected_tickers.marketCap / df_selected_tickers.marketCap.sum()
 #+end_src
 
-- Market cap equilibrium weights
-#+begin_src python :tangle yes :results output
+#+NAME: Market cap equilibrium weights
+#+begin_src python :results output
   portfolios_path = pathlib.Path("./data/portfolios/")
   portfolios_path.mkdir(parents=True, exist_ok=True)
   portfolios_file = portfolios_path / ("_".join(df_selected_tickers.index))
@@ -182,6 +184,20 @@ Normal distributions:
   print(w_mkt)
   #w_mkt = w_mkt.to_numpy()
 #+end_src
+
+#+RESULTS: Market cap equilibrium weights
+#+begin_example
+KO      0.430949
+LOW     0.211659
+GS      0.185425
+ALGN    0.043380
+FICO    0.035078
+DOV     0.032496
+ATO     0.027659
+ESS     0.026347
+DXC     0.007006
+Name: marketCap, dtype: float64
+#+end_example
 
 #+RESULTS:
 #+begin_example
@@ -437,7 +453,7 @@ Notes:
 #+end_example
 
 
-#+begin_src python :tangle yes :results none
+#+begin_src python :results none
   returns_pred = factor_model(df_factors_test[factor_names].to_numpy())
   df_returns_pred = pd.DataFrame(returns_pred,
                                  columns=asset_names,
@@ -445,6 +461,7 @@ Notes:
 #+end_src
 
 *** Factors backtesting
+#+begin_comment
 #+NAME: predicted_returns
 #+begin_src python :var i_asset=0 name=(org-element-property :name (org-element-context))
   i_asset = i_asset
@@ -476,11 +493,46 @@ Notes:
 #+CAPTION:  Backtesting factor approximation on Google asset
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: predicted_returns0
-[[file:img/predicted_returns_KO.png]]
+#+end_comment
+
+#+begin_src python :results none
+  def plot_rets_fromfactors(i_asset, name):
+
+      i_name = asset_names[i_asset]
+      fig1_path= img_dir / f'{name}{i_name}.png'
+      fig1 = go.Figure()
+      fig1.add_trace(go.Scatter(
+          x=df_assets_test.index,
+          y=df_assets_test.iloc[:, i_asset] - df_factors_test.RF.to_numpy(),
+          mode='lines+markers',
+          name=f"{i_name} real"))
+      fig1.add_trace(go.Scatter(
+          x=df_assets_test.index,
+          y=df_returns_pred[i_name],
+          mode='lines',
+          name=f"{i_name} pred."))
+
+      #px.line(df_returns_pred['GOOGL'], y=df_returns_pred.keys()[0])
+
+      fig1.write_image(fig1_path)
+      return str(fig1_path)
+
+#+end_src
+
+#+NAME: predicted_returns0
+#+begin_src python :noweb eval :results value file  :exports results
+  fig_path = predicted_returns(i_asset=0, name="predicted_returns_")
+  fig_path
+#+end_src
+#+CAPTION:  Backtesting factor approaximation on Google asset
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: predicted_returns0
+[[file:img/predicted_returns_WFC.png]]
+
 
 #+NAME: predicted_returns1
 #+begin_src python :noweb eval :results value file  :exports results
-  fig_path = "<<predicted_returns(i_asset=1, name="predicted_returns_")>>"
+  fig_path = predicted_returns(i_asset=1, name="predicted_returns_")
   fig_path
 #+end_src
 #+CAPTION:  Backtesting factor approaximation on Google asset
@@ -490,7 +542,7 @@ Notes:
 
 #+NAME: predicted_returns2
 #+begin_src python :noweb eval :results value file  :exports results
-  fig_path = "<<predicted_returns(i_asset=2, name="predicted_returns_")>>"
+  fig_path = predicted_returns(i_asset=2, name="predicted_returns_")
   fig_path
 #+end_src
 #+CAPTION:  Backtesting factor approaximation on Google asset
@@ -500,7 +552,7 @@ Notes:
 
 #+NAME: predicted_returns3
 #+begin_src python :noweb eval :results value file  :exports results
-  fig_path = "<<predicted_returns(i_asset=3, name="predicted_returns_")>>"
+  fig_path = predicted_returns(i_asset=3, name="predicted_returns_")
   fig_path
 #+end_src
 #+CAPTION:  Backtesting factor approaximation on Google asset
@@ -510,7 +562,7 @@ Notes:
 
 ** Generation of asset views
 :PROPERTIES:
-:header-args: :session py1 :tangle yes
+:header-args: :session py1 :tangle yes :comments org
 :END:
 *** ARIMA model construction
 #+NAME: arima_autocorrelation
@@ -539,14 +591,47 @@ Notes:
 
 *** ARIMA model prediction
 #+begin_src python :results none
-  X = df_factors_train[factor_names].to_numpy()
+  Xtrain = df_factors_train[factor_names].to_numpy()
+  Xtest = df_factors_test[factor_names].to_numpy()
+  index_train = df_factors_train.index
+  index_test = df_factors_test.index
   arima_train_models = model_stats.arima_fit(X, factor_names, (2,1,0))
 #+end_src
 
+#+begin_src python :results none
+  df_arimatrain, df_arimatest = model_stats.arima_build_pred(arima_train_models,
+                                                             Xtrain, Xtest,
+                                                             factor_names,
+                                                             index_train,
+                                                             index_test)
+
+
+#+end_src
 
 ** Black-Litterman based portfolio
+:PROPERTIES:
+:header-args: :session py1 :tangle yes :comments org
+:END:
+
 *** Prior and posterior returns construction
-*** Views on
+
+#+NAME: Calculate Covariance
+#+begin_src python :results none
+  df_Sigma = df_factors[factor_names].cov()
+  df_Sigma_train = df_factors_train[factor_names].cov()
+  df_Sigma_test = df_factors_test[factor_names].cov()
+  Sigma = df_Sigma.to_numpy()
+  Sigma_train = df_Sigma_train.to_numpy()
+  Sigma_test = df_Sigma_test.to_numpy()
+#+end_src
+
+#+NAME: Black-Litterman initialisation
+#+begin_src python :results none
+  pf_trustee = bl.BlackLitterman(Sigma, w_mkt, config.lambda_mkt[0])
+  pf_ = bl.BlackLitterman(Sigma, w_mkt, config.lambda_mkt[1])
+  pf_trustee = bl.BlackLitterman(Sigma, w_mkt, config.lambda_mkt[2])
+#+end_src
+
 *** Covariance treatment
 *** Portfolio weights optimisation
 *** Analysis and discussion

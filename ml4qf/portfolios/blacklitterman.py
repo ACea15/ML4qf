@@ -2,16 +2,12 @@ import numpy as np
 
 class BlackLitterman:
 
-    def __init__(self, lambda_portfolio, Sigma, w_mkt, lambda_mkt=None):
+    def __init__(self, Sigma, w_mkt, lambda_mkt):
 
-        self.lambda_portfolio = lambda_portfolio
         self.Sigma = Sigma
         self.w_mkt = w_mkt
         self.portfolio_settings = dict()
-        if lambda_mkt is None:
-            self.lambda_mkt = lambda_portfolio
-        else:
-            self.lambda_mkt = lambda_mkt
+        self.lambda_mkt = lambda_mkt
         self.compute_Sigma_inv()
         
     def compute_Sigma_inv(self):
@@ -30,7 +26,6 @@ class BlackLitterman:
             self._set_P(P)
         if Q is not None:
             self._set_Q(Q)
-        self.update_posterior = True
         assert self.tau is not None, "tau needs to not be None"
         assert self.P is not None, "P needs to not be None"
         assert self.Q is not None, "Q needs to not be None"
@@ -39,6 +34,7 @@ class BlackLitterman:
             self._set_Omega(Omega) # dafault
         self.compute_mu_mkt()
         self.compute_BLposterior()
+        
     def _set_Omega(self, Omega):
         self.portfolio_settings['Omega'] = Omega
         self.Omega = Omega
@@ -63,15 +59,7 @@ class BlackLitterman:
                                       + tauSigma_inv)
         self.mu_bl = self.Sigma_bl @ (Pt @ self.Omega_inv @ self.Q
                                       + tauSigma_inv @ self.mu_mkt)
-        self.update_posterior = False
         
-    def compute_w_bl(self):
-
-        if self.update_posterior:
-            self.compute_BLposterior()
-        self.w_bl = (1./self.lambda_portfolio *
-                     np.linalg.inv(self.Sigma_inv +
-                                   self.Sigma_bl) @ self.mu_bl)
     
 
 if __name__ == "__main__":
