@@ -76,6 +76,43 @@ The S&P 500 is considered a better reflection of the market’s performance acro
 #+end_comment
 
 * Theory
+** Black-Litterman model
+$$
+VAR(X) = \frac{1}{n-1} \Sigma (xi - E(X))^2 
+$$
+$$
+COV(X, Y) = \frac{1}{n-1} \Sigma (xi - E(X)) (yi - E(Y)) 
+$$
+$$
+COR(X, Y) = \frac{COV(X, Y)}{(VAR(X)VAR(Y))^{0.5}}
+$$
+
+
+$$
+\mu_{eq} = \lambda \Sigma w_{mkt}
+$$
+
+- $\mu_{eq}$ is the Implied Excess Equilibrium Return Vector 
+- $\lambda$ is the risk aversion coefficient, \lambda = \frac{E(\mu) - \mu_r}{\sigma^2}$
+- $\Sigma$ is the covariance matrix of excess returns
+- $w_{mkt}$ are market capitalization weights
+
+$$
+E[\mu_{bl}] = \left[(\tau \Sigma)^{-1} + P'\Omega^{-1}P\right]^{-1} \left[(\tau \Sigma)^{-1}\mu_{eq} + P'\Omega^{-1}Q\right]  
+$$
+
+- $E[\mu_{bl}]$: Posterior combined return vector ($N\times a$)
+- $\tau$: error in views
+- $P$: Matrix identifying assets involved in the views ($K\times N$)
+- $Q$: View vector ($K\times 1$)
+- $\Omega$: Diagonal covariance matrix with the errors expressed in the views ($N\times N$). 
+
+Normal distributions:
+
+- Prior equilibrium distribution: $N(\mu_{eq}, \tau \Sigma)$
+- Views distribution: $N(Q, \Omega)$
+- New combined return distribution: $N\left(E[\mu_{bl}], \left[(\tau \Sigma)^{-1} + P'\Omega^{-1}P\right]^{-1} \right)$
+  
 ** Fama-French factors
 
 It is one of the multi-factor models which is widely used in both academia and industry to estimate the excess return of an investment asset. It is an extension to Capital Asset Pricing Model (CAPM) by adding two additional factors apart from the market risk when estimating the excess returns of an asset. The three factors considered in this model are:
@@ -116,33 +153,6 @@ The parameters of the ARIMA model are defined as follows:
 - d: Number of times differencing is applied to the observations.
 - q: Size of moving average window.
 
-** Black-Litterman model
-
-$$
-\mu_{eq} = \lambda \Sigma w_{mkt}
-$$
-
-- $\mu_{eq}$ is the Implied Excess Equilibrium Return Vector 
-- $\lambda$ is the risk aversion coefficient, \lambda = \frac{E(\mu) - \mu_r}{\sigma^2}$
-- $\Sigma$ is the covariance matrix of excess returns
-- $w_{mkt}$ are market capitalization weights
-
-$$
-E[\mu_{bl}] = \left[(\tau \Sigma)^{-1} + P'\Omega^{-1}P\right]^{-1} \left[(\tau \Sigma)^{-1}\mu_{eq} + P'\Omega^{-1}Q\right]  
-$$
-
-- $E[\mu_{bl}]$: Posterior combined return vector ($N\times a$)
-- $\tau$: error in views
-- $P$: Matrix identifying assets involved in the views ($K\times N$)
-- $Q$: View vector ($K\times 1$)
-- $\Omega$: Diagonal covariance matrix with the errors expressed in the views ($N\times N$). 
-
-Normal distributions:
-
-- Prior equilibrium distribution: $N(\mu_{eq}, \tau \Sigma)$
-- Views distribution: $N(Q, \Omega)$
-- New combined return distribution: $N\left(E[\mu_{bl}], \left[(\tau \Sigma)^{-1} + P'\Omega^{-1}P\right]^{-1} \right)$
-  
 ** Optimisation
 
 - Minimise Mean variance
@@ -635,8 +645,10 @@ Notes:
 *** Covariance treatment
 *** Portfolio weights optimisation
 *** Analysis and discussion
+
+- active risk (Table 6)
 *** Performance comparison
-sss
+
 
 
 #+LaTeX: \appendix

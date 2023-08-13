@@ -50,4 +50,5 @@ days = (end - start).days
 train_test_ratio = 0.8
 split_data_idx = int(train_test_ratio * days * 12 / 365)
 
-lambda_mkt = [1, 1.2, 1.4]
+lambda_mkt = 2.24
+lambda_portfolio = [0.1, 2.24, 6]

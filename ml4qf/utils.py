@@ -4,6 +4,9 @@ import pandas as pd
 from collections import namedtuple
 import datetime
 import re
+import scipy.integrate
+from collections.abc import Iterable
+import functools
 
 def clean(s):
 
@@ -118,3 +121,55 @@ def date_filter_lower(df, column, date_lower=None):
             date2keep.append(i)
     df_out = df.iloc[date2keep]
     return df_out
+
+def profit_discrete(r, n=None, t=None, dt=1., P0=1.):
+
+    if isinstance(r, Iterable):
+        n = len(r)
+        r = np.array(r)
+    elif n is None:
+        n = t / dt
+    return P0 * np.product(1 + r * dt)
+
+def profit_continuous(r, n=None, t=None, dt=1., P0=1.):
+
+    if n is None:
+        n = t / dt + 1
+    if t is None:
+        t = dt * (n - 1)
+    x_t = np.linspace(0, t, n)
+    if isinstance(r, float):
+        y = r * np.ones(n + 1)
+    else:
+        y = r
+        assert len(y) == (n + 1), f"r is not of length {n + 1}"
+
+    return_integral = scipy.integrate.simpson(y, x_t)
+    return P0 * np.exp(return_integral)
+
+def profit_portfolio(df: pd.DataFrame, weights: dict[str:float]):
+
+    df = df.copy()
+    asset_names = list(weights.keys())
+    assert asset_names == list(df.columns), "mismatch in the inputs names"
+    profit_funcs = {k: functools.partial(profit_discrete, P0=v) for k, v
+                    in weights.items()}
+    # return profit_funcs
+    # profit_funcs = {k: profit_discrete for k, v
+    #                 in weights.items()}
+    
+    #profit_funcs = {'a':np.prod, 'b':np.sum}
+    for k in asset_names:
+        #print(df[k].expanding(1).apply(profit_funcs[k]))
+        df[k] = df[k].expanding(1).apply(profit_funcs[k])
+    return df
+
+def multi_func(functions):
+    def f(col):
+        # try:
+        #     res = functions[col.name](col) 
+        # except KeyError:
+        #     res = 0
+        return functions.get(col.name, lambda x: x)(col)
+
+    return f
