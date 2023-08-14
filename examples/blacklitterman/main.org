@@ -730,6 +730,58 @@ Notes:
   print(res1.x)
 #+end_src
 
+#+NAME: Function to build portfolios weights
+#+begin_src python :results none
+
+
+  def build_portfolio_weights(mu_targetlist, x0,
+                              mu_mkt, Sigma, cons_sett):
+
+      res_list = list()
+      for mu_i in mu_targetlist:
+          args = (mu_mkt*12, # annualised
+                  Sigma,
+                  mu_i)
+          cons_sett = dict(eq_rets=dict(type="eq"),
+                           eq_weights1=dict(type="eq"),
+                           #ieq_weights0=dict(type="ineq")
+                           )
+          res = optimization.scipy_minimize("variance",
+                                             x0,
+                                             method_name='SLSQP',
+                                             args=args,
+                                             cons_sett=cons_sett,
+                                             options=dict(maxiter=200,
+                                                          ftol=1e-12))
+          res_list.append(res)
+      return res_list
+
+  weights = [ri.x for ri in res_list]
+  vols=[((ri.fun) * 12)**0.5 *100 for ri in res_list]
+  mu_targetlist = np.linspace(3,25,23) * 1e-2
+  weights_vols = {'weights':
+  df_weights_vols = pd.Dataframe(dict(weights=weights,
+                                      vols=vols,
+                                      assets=assets))
+
+
+#+end_src
+
+#+NAME: Weights_Composition
+#+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
+  fig1_path= img_dir / f'{name}.png'
+  fig = px.area(df_weights_vols, x="vols", y="weights", color="assets",
+                #pattern_shape_sequence=[".", "x", "+"],              
+                pattern_shape="assets"
+                )
+  fig1.write_image(fig1_path)
+  fig1_path
+#+end_src
+
+
+
+
+
 #+begin_src python :results none
   weights_sol = {k: res1.x[i] for i, k in enumerate(asset_names)}
   df_profits_sol = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol)
