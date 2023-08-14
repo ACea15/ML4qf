@@ -44,6 +44,7 @@
   from ml4qf.predictors.model_stats import regression_OLS
   import ml4qf.predictors.model_stats as model_stats
   import ml4qf.portfolios.blacklitterman as bl
+  import ml4qf.portfolios.optimization as optimization  
   from tabulate import tabulate
   import plotly.express as px
   import plotly.graph_objects as go
@@ -93,7 +94,7 @@ $$
 $$
 
 - $\mu_{eq}$ is the Implied Excess Equilibrium Return Vector 
-- $\lambda$ is the risk aversion coefficient, \lambda = \frac{E(\mu) - \mu_r}{\sigma^2}$
+- $\lambda$ is the risk aversion coefficient, $\lambda = \frac{E(\mu) - \mu_r}{\sigma^2}$
 - $\Sigma$ is the covariance matrix of excess returns
 - $w_{mkt}$ are market capitalization weights
 
@@ -164,25 +165,34 @@ The parameters of the ARIMA model are defined as follows:
 :PROPERTIES:
 :header-args: :session py1 :tangle yes :comments org
 :END:
-
 *** Asset selection
+#+begin_src python  :results none
+  sp500 = financial_features.FinancialData("^GSPC",
+                                           config.start_date_assets,
+                                           config.end_date_assets)
+  df_sp500 = sp500.df['return_log'].dropna()
+#+end_src
+
 #+begin_src python  :results none
   tickers_sp500 = ml4qf.collectors.scrap_tickers_index(config.index_weblist)
   df_tickers_sp500 = ml4qf.collectors.get_tickers_info(tickers_sp500,
-                                                   config.info_sp500,
-                                                   data_folder="./data",
-                                                   name_family="sp500")
+                                                       config.info_sp500,
+                                                       data_folder="./data",
+                                                       name_family="sp500")
   df_tickers_sp500.dropna(inplace=True)
   df_tickers_filtered = ml4qf.utils.date_filter_lower(df_tickers_sp500,
-                                                'first_date',
-                                                date_lower=config.start_date_assets)
+                                                      'first_date',
+                                                      date_lower=config.start_date_assets)
   df_tickers_filtered =  df_tickers_filtered.sort_values('marketCap',ascending=False)
   df_selected_tickers = ml4qf.collectors.select_assets(df_tickers_filtered,
                                                        config.ASSET_SELECTION_PCT,
                                                        config.ASSET_SELECTION_NAMES)
   # #FinancialDataContainer
   w_mkt = df_selected_tickers.marketCap / df_selected_tickers.marketCap.sum()
+  num_assets = len(df_selected_tickers)
 #+end_src
+
+
 
 #+NAME: Market cap equilibrium weights
 #+begin_src python :results output
@@ -197,15 +207,16 @@ The parameters of the ARIMA model are defined as follows:
 
 #+RESULTS: Market cap equilibrium weights
 #+begin_example
-KO      0.430949
-LOW     0.211659
-GS      0.185425
-ALGN    0.043380
-FICO    0.035078
-DOV     0.032496
-ATO     0.027659
-ESS     0.026347
-DXC     0.007006
+JPM      0.491942
+CMCSA    0.207776
+ADI      0.102000
+PH       0.059630
+DXCM     0.047344
+TSCO     0.027034
+AEE      0.023417
+CAG      0.016425
+CE       0.015118
+FRT      0.009313
 Name: marketCap, dtype: float64
 #+end_example
 
@@ -246,18 +257,18 @@ Name: marketCap, dtype: float64
 
 #+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption  
 #+RESULTS: df_assets
-|                     |       AMZN |         LIN |       CDNS |        ACGL |        ALGN |        MKC |        EQT |         AOS |        PNW |
-|---------------------+------------+-------------+------------+-------------+-------------+------------+------------+-------------+------------|
-| 2011-02-01 00:00:00 |  0.0215161 |   0.0681427 |   0.146313 |   0.0254957 | 0.000960176 |  0.0780543 |  0.0230338 |  -0.0562953 |  0.0373373 |
-| 2011-03-01 00:00:00 |  0.0394714 |   0.0223385 | -0.0201005 |    0.096022 |  -0.0177458 | 0.00377755 |  0.0121704 |   0.0975247 |  0.0132607 |
-| 2011-04-01 00:00:00 |  0.0870482 |   0.0474409 |  0.0646154 |   0.0484929 |    0.178711 |  0.0269705 |   0.054509 | -0.00834459 |  0.0140219 |
-| 2011-05-01 00:00:00 | 0.00449422 | -0.00545012 |  0.0298651 |  -0.0270193 |    0.014913 |  0.0217834 |  0.0296465 |  -0.0568569 |  0.0430975 |
-| 2011-06-01 00:00:00 |  0.0396562 |    0.024093 | -0.0121608 |  -0.0536614 |  -0.0693878 |  -0.012353 | -0.0306386 |   0.0200144 | -0.0150242 |
-| 2011-07-01 00:00:00 |  0.0881706 |  -0.0438232 | -0.0217803 |   0.0588973 |  -0.0355263 | -0.0185596 |   0.208682 |  -0.0196217 | -0.0500225 |
-| 2011-08-01 00:00:00 | -0.0327611 |  -0.0496913 |  -0.105518 | -0.00355029 |   -0.131423 | -0.0176773 | -0.0576559 |  -0.0525681 |  0.0446282 |
-| 2011-09-01 00:00:00 | 0.00464612 |  -0.0508681 |          0 |  -0.0296913 |   -0.205759 | -0.0341076 |  -0.107991 |    -0.18478 | -0.0293852 |
-| 2011-10-01 00:00:00 | -0.0125792 |   0.0876123 |   0.198052 |    0.100673 |    0.518128 |  0.0519931 |    0.19003 |    0.160162 |  0.0614812 |
-| 2011-11-01 00:00:00 | -0.0993864 |  0.00324581 | -0.0117435 |   0.0500417 |   0.0638298 | 0.00288302 | -0.0234646 |   0.0565123 |  0.0401491 |
+|                     |        JPM |      CMCSA |        ADI |          PH |        DXCM |       TSCO |          AEE |         CAG |         CE |         FRT |
+|---------------------+------------+------------+------------+-------------+-------------+------------+--------------+-------------+------------+-------------|
+| 2011-03-01 00:00:00 | -0.0126365 | -0.0403727 | -0.0125376 |    0.061673 |   0.0608339 |   0.149606 |   0.00393421 |    0.025475 |  0.0704463 |  -0.0311238 |
+| 2011-04-01 00:00:00 | -0.0101952 |  0.0602751 |  0.0236161 | -0.00380229 |   0.0728092 |  0.0335783 |    0.0441753 |   0.0294736 |   0.125085 |   0.0735655 |
+| 2011-05-01 00:00:00 | -0.0523778 | -0.0370088 |  0.0213346 |  -0.0579941 |  -0.0528528 |  0.0208502 |    0.0136472 |   0.0400818 |  0.0434696 |  0.00045684 |
+| 2011-06-01 00:00:00 | -0.0531916 | 0.00396198 | -0.0493077 |   0.0100169 |  -0.0811668 |   0.058898 |    -0.029283 |    0.014943 |   0.023421 |  -0.0276256 |
+| 2011-07-01 00:00:00 | -0.0119687 | -0.0520915 |  -0.121104 |   -0.119456 |   -0.021394 | -0.0143541 | -0.000693497 | -0.00774901 |  0.0341399 |    0.025358 |
+| 2011-08-01 00:00:00 | -0.0714462 |  -0.104496 | -0.0401163 |  -0.0707415 |   -0.151622 |  -0.069023 |    0.0499653 |  -0.0464662 |  -0.147288 |    0.036753 |
+| 2011-09-01 00:00:00 |  -0.198083 | -0.0274291 | -0.0536039 |    -0.14027 | -0.00249374 |  0.0189017 |    -0.016193 | -0.00818998 |   -0.30802 |  -0.0898951 |
+| 2011-10-01 00:00:00 |    0.15405 |   0.120937 |    0.17024 |    0.291779 |   -0.184167 |   0.134496 |    0.0708767 |   0.0458299 |   0.338764 |   0.0770537 |
+| 2011-11-01 00:00:00 |  -0.109033 | -0.0332623 | -0.0467596 |   0.0150827 |   -0.180797 |  0.0181844 |    0.0605396 | -0.00276358 |  0.0675087 | -0.00371791 |
+| 2011-12-01 00:00:00 |  0.0736197 |  0.0458756 |  0.0263912 |  -0.0788838 |    0.160848 | -0.0287969 |   -0.0201124 |   0.0451306 | -0.0477522 |   0.0262354 |
 
 
 
@@ -346,58 +357,56 @@ Name: marketCap, dtype: float64
 #+end_src
 
 #+RESULTS: df_train_factors
-|      |       alpha |   Mkt-RF |        SMB |        HML |       RMW |       CMA |       MOM |
-|------+-------------+----------+------------+------------+-----------+-----------+-----------|
-| KO   | -0.00504705 | 0.715481 |  -0.606405 |   0.253916 |  0.673695 |  0.232055 |  0.255632 |
-| LOW  |  0.00256421 |  1.35459 |   0.424878 |  -0.444549 |  0.163616 |  0.367605 |  0.183704 |
-| GS   | -0.00171691 |  1.26161 |  -0.367694 |    1.10773 |  -1.08038 | -0.779736 |  -0.30657 |
-| ALGN |  0.00812828 |  1.85869 |   0.855478 |  -0.346435 |  0.665934 |  -1.37539 |  0.300928 |
-| FICO |    0.010519 |  1.33782 |   0.491586 |  -0.447025 |  0.409309 | -0.132692 |  0.381129 |
-| DOV  | -0.00119858 |   1.2466 |  0.0759657 |  0.0106195 | 0.0359513 |  0.206847 |  -0.35993 |
-| ATO  |  0.00370247 | 0.532019 | -0.0095945 | -0.0506821 |  0.474951 |  0.772017 |  0.462068 |
-| ESS  | 0.000448892 | 0.597641 |   0.218558 |   0.449575 |  0.268346 | -0.688924 |  0.337749 |
-| DXC  | -0.00824096 |  1.75237 |  -0.341453 |   0.862479 | -0.423773 |  -1.65855 | -0.341152 |
-
-
+|       |       alpha |   Mkt-RF |        SMB |       HML |        RMW |        CMA |        MOM |
+|-------+-------------+----------+------------+-----------+------------+------------+------------|
+| JPM   |  0.00445065 |  1.10652 |  -0.440155 |   1.40538 |   -1.24112 |  -0.824686 | -0.0246697 |
+| CMCSA |   0.0013236 |  1.07818 |  -0.331769 | -0.109582 | -0.0620382 |   0.709663 |  -0.134245 |
+| ADI   |  0.00284991 |   1.0065 |   0.470268 | 0.0107203 |   0.101693 |  -0.426269 |  -0.367543 |
+| PH    |  -0.0023811 |  1.37354 |   0.543136 |  0.193102 |   0.399803 | -0.0483402 |  -0.298496 |
+| DXCM  |   0.0303054 | 0.374555 |    1.41041 |  -1.78457 |  -0.936454 |    -1.1328 |  -0.356339 |
+| TSCO  |  0.00455325 |  1.09016 |    0.55251 |  -0.63082 |   0.675689 |   0.972401 |  0.0849717 |
+| AEE   |  0.00366709 | 0.476508 |  -0.136473 |  0.185148 |   0.372146 |   0.239563 |   0.481544 |
+| CAG   |  -0.0011143 | 0.831855 |  -0.189053 | -0.238849 |   0.631176 |    1.16124 |  0.0633045 |
+| CE    | 0.000539305 |  1.33332 | -0.0800048 |  0.681784 | -0.0613478 |  -0.528645 |  -0.129299 |
+| FRT   | -0.00442393 | 0.574232 |   0.542634 |  0.401857 |   0.960915 |  -0.118601 |   0.184955 |
 
 #+begin_src python :results output :exports results
-  print(factor_models[df_assets.keys()[2]].summary())
+  print(factor_models[df_assets.keys()[1]].summary())
 #+end_src
 
 #+RESULTS:
 #+begin_example
                             OLS Regression Results                            
 ==============================================================================
-Dep. Variable:                      y   R-squared:                       0.703
-Model:                            OLS   Adj. R-squared:                  0.686
-Method:                 Least Squares   F-statistic:                     41.78
-Date:                Fri, 11 Aug 2023   Prob (F-statistic):           8.75e-26
-Time:                        22:46:24   Log-Likelihood:                 191.62
-No. Observations:                 113   AIC:                            -369.2
-Df Residuals:                     106   BIC:                            -350.1
+Dep. Variable:                      y   R-squared:                       0.498
+Model:                            OLS   Adj. R-squared:                  0.469
+Method:                 Least Squares   F-statistic:                     17.50
+Date:                Mon, 14 Aug 2023   Prob (F-statistic):           5.41e-14
+Time:                        09:02:49   Log-Likelihood:                 201.27
+No. Observations:                 113   AIC:                            -388.5
+Df Residuals:                     106   BIC:                            -369.5
 Df Model:                           6                                         
 Covariance Type:            nonrobust                                         
 ==============================================================================
                  coef    std err          t      P>|t|      [0.025      0.975]
 ------------------------------------------------------------------------------
-const         -0.0017      0.005     -0.367      0.714      -0.011       0.008
-x1             1.2616      0.129      9.791      0.000       1.006       1.517
-x2            -0.3677      0.222     -1.656      0.101      -0.808       0.072
-x3             1.1077      0.228      4.850      0.000       0.655       1.561
-x4            -1.0804      0.312     -3.466      0.001      -1.698      -0.462
-x5            -0.7797      0.365     -2.136      0.035      -1.504      -0.056
-x6            -0.3066      0.158     -1.943      0.055      -0.619       0.006
+const          0.0013      0.004      0.308      0.759      -0.007       0.010
+x1             1.0782      0.118      9.114      0.000       0.844       1.313
+x2            -0.3318      0.204     -1.628      0.107      -0.736       0.072
+x3            -0.1096      0.210     -0.523      0.602      -0.525       0.306
+x4            -0.0620      0.286     -0.217      0.829      -0.629       0.505
+x5             0.7097      0.335      2.117      0.037       0.045       1.374
+x6            -0.1342      0.145     -0.927      0.356      -0.421       0.153
 ==============================================================================
-Omnibus:                       10.163   Durbin-Watson:                   2.124
-Prob(Omnibus):                  0.006   Jarque-Bera (JB):               23.665
-Skew:                          -0.151   Prob(JB):                     7.26e-06
-Kurtosis:                       5.222   Cond. No.                         91.5
+Omnibus:                        0.015   Durbin-Watson:                   2.215
+Prob(Omnibus):                  0.993   Jarque-Bera (JB):                0.132
+Skew:                          -0.010   Prob(JB):                        0.936
+Kurtosis:                       2.834   Cond. No.                         91.5
 ==============================================================================
 
 Notes:
 [1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
 #+end_example
-
 
 #+begin_src python :session py1 :results none :exports none
   import getFamaFrenchFactors as gff
@@ -531,18 +540,18 @@ Notes:
 
 #+NAME: predicted_returns0
 #+begin_src python :noweb eval :results value file  :exports results
-  fig_path = predicted_returns(i_asset=0, name="predicted_returns_")
+  fig_path = plot_rets_fromfactors(i_asset=0, name="predicted_returns_")
   fig_path
 #+end_src
 #+CAPTION:  Backtesting factor approaximation on Google asset
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: predicted_returns0
-[[file:img/predicted_returns_WFC.png]]
+[[file:img/predicted_returns_JPM.png]]
 
 
 #+NAME: predicted_returns1
 #+begin_src python :noweb eval :results value file  :exports results
-  fig_path = predicted_returns(i_asset=1, name="predicted_returns_")
+  fig_path = plot_rets_fromfactors(i_asset=1, name="predicted_returns_")
   fig_path
 #+end_src
 #+CAPTION:  Backtesting factor approaximation on Google asset
@@ -552,7 +561,7 @@ Notes:
 
 #+NAME: predicted_returns2
 #+begin_src python :noweb eval :results value file  :exports results
-  fig_path = predicted_returns(i_asset=2, name="predicted_returns_")
+  fig_path = plot_rets_fromfactors(i_asset=2, name="predicted_returns_")
   fig_path
 #+end_src
 #+CAPTION:  Backtesting factor approaximation on Google asset
@@ -562,7 +571,7 @@ Notes:
 
 #+NAME: predicted_returns3
 #+begin_src python :noweb eval :results value file  :exports results
-  fig_path = predicted_returns(i_asset=3, name="predicted_returns_")
+  fig_path = plot_rets_fromfactors(i_asset=3, name="predicted_returns_")
   fig_path
 #+end_src
 #+CAPTION:  Backtesting factor approaximation on Google asset
@@ -625,14 +634,43 @@ Notes:
 
 *** Prior and posterior returns construction
 
-#+NAME: Calculate Covariance
+#+NAME: Calculate Covariance of excess returns
 #+begin_src python :results none
-  df_Sigma = df_factors[factor_names].cov()
-  df_Sigma_train = df_factors_train[factor_names].cov()
-  df_Sigma_test = df_factors_test[factor_names].cov()
-  Sigma = df_Sigma.to_numpy()
-  Sigma_train = df_Sigma_train.to_numpy()
-  Sigma_test = df_Sigma_test.to_numpy()
+  df_Sigma_factors = df_factors[factor_names].cov()
+  df_Sigma_factors_train = df_factors_train[factor_names].cov()
+  df_Sigma_factors_test = df_factors_test[factor_names].cov()
+  Sigma_factors = df_Sigma_factors.to_numpy()
+  Sigmainv_factors = np.linalg.inv(Sigma_factors)
+  Sigma_factors_train = df_Sigma_factors_train.to_numpy()
+  Sigmainv_factors_train = np.linalg.inv(Sigma_factors_train)
+  Sigma_factors_test = df_Sigma_factors_test.to_numpy()
+  Sigmainv_factors_test = np.linalg.inv(Sigma_factors_test)
+  #####
+  df_Sigma_assets = df_assets.cov()
+  df_Sigma_assets_train = df_assets_train.cov()
+  df_Sigma_assets_test = df_assets_test.cov()
+  Sigma_assets = df_Sigma_assets.to_numpy()
+  Sigmainv_assets = np.linalg.inv(Sigma_assets)
+  Sigma_assets_train = df_Sigma_assets_train.to_numpy()
+  Sigmainv_assets_train = np.linalg.inv(Sigma_assets_train)
+  Sigma_assets_test = df_Sigma_assets_test.to_numpy()
+  Sigmainv_assets_test = np.linalg.inv(Sigma_assets_test)
+  #####
+  Sigma_4mfactors = beta.T @ Sigma_factors @ beta
+  Sigmainv_4mfactors = np.linalg.inv(Sigma_4mfactors)
+  Sigma_4mfactors_train = beta.T @ Sigma_factors_train @ beta
+  Sigmainv_4mfactors_train = np.linalg.inv(Sigma_4mfactors_train)
+  Sigma_4mfactors_test = beta.T @ Sigma_factors_test @ beta
+  Sigmainv_4mfactors_test = np.linalg.inv(Sigma_4mfactors_test)
+
+#+end_src
+
+#+NAME: Compute equilibrium returns 
+#+begin_src python :results none
+  f_mu = lambda l, S, w: l * S @ w
+  mu_mkt_assets = f_mu(config.lambda_mkt, Sigma_assets, w_mkt)
+  mu_mkt_4mfactors = f_mu(config.lambda_mkt, Sigma_4mfactors, w_mkt)
+  optimization.mean_variance_opt(mu_mkt_assets)
 #+end_src
 
 #+NAME: Black-Litterman initialisation
@@ -644,6 +682,78 @@ Notes:
 
 *** Covariance treatment
 *** Portfolio weights optimisation
+
+#+NAME: Calculate Covariance of factors
+#+begin_src python :results none
+
+  lmb_p = config.lambda_portfolio[2]
+  w_opt0 = optimization.mean_variance_opt(mu_mkt_assets,            
+                                          Sigmainv_assets,          
+                                          lmb_p)
+
+  x0 = 1. / num_assets * np.ones(num_assets)
+  args = (mu_mkt_assets,            
+          Sigma_assets,          
+          lmb_p)
+  res0 = optimization.scipy_minimize("mean_variance",
+                                     x0,
+                                     method_name='SLSQP',
+                                     args=args,
+                                     options=dict(maxiter=200,
+                                                  ftol=1e-12))
+
+#+end_src
+
+#+NAME: Compute porfolio weights frontier
+#+begin_src python :results none
+
+  lmb_p = config.lambda_portfolio[2]
+
+  x0 = 1. / num_assets * np.ones(num_assets)
+  args = (mu_mkt_assets*12,
+          Sigma_assets,
+          0.1)
+  cons_sett = dict(eq_rets=dict(type="eq"),
+                   eq_weights1=dict(type="eq"),
+                   ieq_weights0=dict(type="ineq")
+                   )
+  res1 = optimization.scipy_minimize("variance",
+                                     x0,
+                                     method_name='SLSQP',
+                                     args=args,
+                                     cons_sett=cons_sett,
+                                     options=dict(maxiter=200,
+                                                  ftol=1e-12))
+
+  print(np.dot(res1.x, Sigma_assets @ res1.x)**0.5 * 12**0.5 * 100)
+  print(sum(res1.x))
+  print(res1.x)
+#+end_src
+
+#+begin_src python :results none
+  weights_sol = {k: res1.x[i] for i, k in enumerate(asset_names)}
+  df_profits_sol = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol)
+  weights_naive = {k: x0[i] for i, k in enumerate(asset_names)}  
+  df_profits_naive = ml4qf.utils.profit_portfolio(df_assets_test, weights_naive)
+
+  df_profits = pd.DataFrame(np.array([df_profits_sol.sum(axis=1).to_numpy(),
+                             df_profits_naive.sum(axis=1).to_numpy()]).T,
+                             columns=['Opt', 'Naive'], index=df_profits_sol.index)
+#+end_src
+
+#+NAME: P&L_plot
+#+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
+  fig1_path= img_dir / f'{name}.png'
+  fig1 = px.line(df_profits, y=['Opt', 'Naive'], markers=True)
+  fig1.write_image(fig1_path)
+  fig1_path
+#+end_src
+
+#+RESULTS: P&L_plot
+[[file:img/P&L_plot.png]]
+
+
+
 *** Analysis and discussion
 
 - active risk (Table 6)
