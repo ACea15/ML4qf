@@ -166,13 +166,15 @@ The parameters of the ARIMA model are defined as follows:
 :header-args: :session py1 :tangle yes :comments org
 :END:
 *** Asset selection
+#+NAME: Load index 
 #+begin_src python  :results none
   sp500 = financial_features.FinancialData("^GSPC",
                                            config.start_date_assets,
                                            config.end_date_assets)
-  df_sp500 = sp500.df['return_log'].dropna()
+  df_sp500 = sp500.df[['returns']].dropna()
 #+end_src
 
+#+NAME: Load portfolio and calculate market weights
 #+begin_src python  :results none
   tickers_sp500 = ml4qf.collectors.scrap_tickers_index(config.index_weblist)
   df_tickers_sp500 = ml4qf.collectors.get_tickers_info(tickers_sp500,
@@ -187,65 +189,59 @@ The parameters of the ARIMA model are defined as follows:
   df_selected_tickers = ml4qf.collectors.select_assets(df_tickers_filtered,
                                                        config.ASSET_SELECTION_PCT,
                                                        config.ASSET_SELECTION_NAMES)
-  # #FinancialDataContainer
+  # Market cap equilibrium weights
   w_mkt = df_selected_tickers.marketCap / df_selected_tickers.marketCap.sum()
   num_assets = len(df_selected_tickers)
-#+end_src
-
-
-
-#+NAME: Market cap equilibrium weights
-#+begin_src python :results output
   portfolios_path = pathlib.Path("./data/portfolios/")
   portfolios_path.mkdir(parents=True, exist_ok=True)
   portfolios_file = portfolios_path / ("_".join(df_selected_tickers.index))
   if not portfolios_file.is_file():
       df_selected_tickers.to_csv(portfolios_file)
-  print(w_mkt)
-  #w_mkt = w_mkt.to_numpy()
-#+end_src
+  w_mkt = w_mkt.to_numpy()
 
-#+RESULTS: Market cap equilibrium weights
-#+begin_example
-JPM      0.491942
-CMCSA    0.207776
-ADI      0.102000
-PH       0.059630
-DXCM     0.047344
-TSCO     0.027034
-AEE      0.023417
-CAG      0.016425
-CE       0.015118
-FRT      0.009313
-Name: marketCap, dtype: float64
-#+end_example
-
-#+RESULTS:
-#+begin_example
-KO      0.430949
-LOW     0.211659
-GS      0.185425
-ALGN    0.043380
-FICO    0.035078
-DOV     0.032496
-ATO     0.027659
-ESS     0.026347
-DXC     0.007006
-Name: marketCap, dtype: float64
-#+end_example
-
-*** Assets exploratory analysis
-#+begin_src python  :results none
+  # Load assets returns
   fdc = financial_features.FinancialDataContainer(df_selected_tickers.index,
                                                   config.start_date_assets,
                                                   config.end_date_assets,
                                                   '1mo',
                                                   './data')
   df_assets = fdc.df.dropna()
-  df_assets_train, df_assets_test = ml4qf.utils.split_df_date(df_assets,
-                                                   split_index=config.split_data_idx)
+  df_assets_train, df_assets_test = ml4qf.utils.split_df_date(
+      df_assets,
+      split_index=config.split_data_idx)
   asset_names = list(df_assets.columns)
+
 #+end_src
+
+#+NAME: Compute and show Data Frame, df_portfolio_summary
+#+begin_src python :results raw :exports results
+  df_portfolio_summary = df_selected_tickers.copy()
+  #df_portfolio_summary = df_portfolio_summary.drop('first_date', axis=1)
+  df_portfolio_summary['marketWeights'] = w_mkt
+  df_portfolio_summary = df_portfolio_summary[['marketCap',
+                                               'marketWeights',
+                                               'sector']]
+  tabulate(df_portfolio_summary,
+           headers=df_portfolio_summary.columns,
+           showindex=True,
+           tablefmt='orgtbl')
+#+end_src
+#+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption  
+#+RESULTS: Compute and show df_portfolio_summary
+|       |   marketCap | marketWeights | sector                 |
+|-------+-------------+---------------+------------------------|
+| JPM   | 4.46929e+11 |      0.491942 | Financial Services     |
+| CMCSA | 1.88765e+11 |      0.207776 | Communication Services |
+| ADI   | 9.26671e+10 |         0.102 | Technology             |
+| PH    | 5.41743e+10 |     0.0596305 | Industrials            |
+| DXCM  | 4.30121e+10 |     0.0473441 | Healthcare             |
+| TSCO  | 2.45608e+10 |     0.0270344 | Consumer Cyclical      |
+| AEE   |  2.1274e+10 |     0.0234166 | Utilities              |
+| CAG   | 1.49224e+10 |     0.0164254 | Consumer Defensive     |
+| CE    | 1.37345e+10 |     0.0151178 | Basic Materials        |
+| FRT   | 8.46088e+09 |    0.00931302 | Real Estate            |
+
+*** Assets exploratory analysis
 
 #+NAME: df_assets
 #+begin_src python :session py1 :results raw :exports results
@@ -254,7 +250,6 @@ Name: marketCap, dtype: float64
            showindex=True,
            tablefmt='orgtbl')
 #+end_src
-
 #+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption  
 #+RESULTS: df_assets
 |                     |        JPM |      CMCSA |        ADI |          PH |        DXCM |       TSCO |          AEE |         CAG |         CE |         FRT |
@@ -270,16 +265,13 @@ Name: marketCap, dtype: float64
 | 2011-11-01 00:00:00 |  -0.109033 | -0.0332623 | -0.0467596 |   0.0150827 |   -0.180797 |  0.0181844 |    0.0605396 | -0.00276358 |  0.0675087 | -0.00371791 |
 | 2011-12-01 00:00:00 |  0.0736197 |  0.0458756 |  0.0263912 |  -0.0788838 |    0.160848 | -0.0287969 |   -0.0201124 |   0.0451306 | -0.0477522 |   0.0262354 |
 
-
-
 #+NAME: basket_returns
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
   fig1_path= img_dir / f'{name}.png'
   fig1 = px.line(df_assets, y=df_assets.keys())
   fig1.write_image(fig1_path)
-  fig1_path
+  fig1_path #
 #+end_src
-
 #+CAPTION:  Asset's basket returns
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: basket_returns
@@ -293,16 +285,16 @@ Name: marketCap, dtype: float64
   fig1.layout.height = 600
   fig1.layout.width = 600
   fig1.write_image(fig1_path)
-  fig1_path
+  fig1_path #
 #+end_src
-
 #+CAPTION: Assets correlation
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: AssetsCorrelation
 [[file:img/AssetsCorrelation.png]]
 
 *** Factor collection
-#+begin_src python :tangle yes :results none
+#+NAME: Load Fama and French 5 factors and Momentum factor  
+#+begin_src python  :results none
   factor_names = financial_factors.get_factor_names(config.FACTORS)  
   df_factors0 = financial_factors.get_factors(config.FACTORS.keys(), 'm')
   df_factors =  ml4qf.utils.trim_df_date(df_factors0, start_date=config.start_date_factors,
@@ -311,43 +303,41 @@ Name: marketCap, dtype: float64
                                           split_index=config.split_data_idx)
 #+end_src
 
-#+NAME: factors_plot
+#+NAME: Plot monthly Factors evolution 
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
   fig1_path= img_dir / f'{name}.png'
   fig1 = px.line(df_factors, y=factor_names)
   fig1.write_image(fig1_path)
-  fig1_path
+  fig1_path # 
 #+end_src
-
 #+CAPTION: Factors evolution
 #+ATTR_LATEX: :width 0.75\textwidth 
-#+RESULTS: factors_plot
-[[file:img/factors_plot.png]]
+#+RESULTS: Plot Factors evolution
+[[file:img/Plot Factors evolution.png]]
 
-
-#+NAME: RF_plot
+#+NAME: RF rate evolution
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
   fig1_path= img_dir / f'{name}.png'
-  fig1 = px.line(df_factors, y='RF')
+  fig1 = px.line(df_factors*12, y='RF')
   fig1.write_image(fig1_path)
-  fig1_path
+  fig1_path #
 #+end_src
-
-#+CAPTION: Risk free rate evolution
+#+CAPTION: (Annualised) risk-free rate evolution
 #+ATTR_LATEX: :width 0.75\textwidth 
-#+RESULTS: RF_plot
-[[file:img/RF_plot.png]]
+#+RESULTS: RF rate evolution
+[[file:img/RF rate evolution.png]]
 *** Factor regression
+#+NAME: Compute regression on assets returns vs factors
 #+begin_src python :results none
   factor_models = financial_factors.factors_regression(factor_names,
-                                                      df_factors_train,
-                                                      df_assets_train,
-                                                      regression_kernel=regression_OLS)
+                                                       df_factors_train,
+                                                       df_assets_train,
+                                                       regression_kernel=regression_OLS)
   alpha, beta = financial_factors.compute_factors_coeff(factor_models)
   factor_model = financial_factors.factor_lin_generator(alpha, beta)
 #+end_src
 
-#+NAME: df_train_factors
+#+NAME: Data Frame df_train_factors with alphas and betas
 #+begin_src python  :results raw :exports results
   albe = np.vstack([alpha, beta]).T
   df_index = asset_names
@@ -355,8 +345,8 @@ Name: marketCap, dtype: float64
   df_train_factors = pd.DataFrame(albe, columns=df_columns, index=df_index)
   tabulate(df_train_factors, headers=df_columns, showindex=True, tablefmt='orgtbl')
 #+end_src
-
-#+RESULTS: df_train_factors
+#+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption
+#+RESULTS: Data Frame df_train_factors with alphas and betas
 |       |       alpha |   Mkt-RF |        SMB |       HML |        RMW |        CMA |        MOM |
 |-------+-------------+----------+------------+-----------+------------+------------+------------|
 | JPM   |  0.00445065 |  1.10652 |  -0.440155 |   1.40538 |   -1.24112 |  -0.824686 | -0.0246697 |
@@ -370,113 +360,59 @@ Name: marketCap, dtype: float64
 | CE    | 0.000539305 |  1.33332 | -0.0800048 |  0.681784 | -0.0613478 |  -0.528645 |  -0.129299 |
 | FRT   | -0.00442393 | 0.574232 |   0.542634 |  0.401857 |   0.960915 |  -0.118601 |   0.184955 |
 
+#+NAME: Summary of factors OLS
 #+begin_src python :results output :exports results
-  print(factor_models[df_assets.keys()[1]].summary())
+  print(factor_models[df_assets.keys()[0]].summary())
 #+end_src
-
-#+RESULTS:
+#+ATTR_LATEX: :width 0.7\textwidth
+#+CAPTION: Summary of factors OLS
+#+RESULTS: Summary of factors OLS
 #+begin_example
                             OLS Regression Results                            
 ==============================================================================
-Dep. Variable:                      y   R-squared:                       0.498
-Model:                            OLS   Adj. R-squared:                  0.469
-Method:                 Least Squares   F-statistic:                     17.50
-Date:                Mon, 14 Aug 2023   Prob (F-statistic):           5.41e-14
-Time:                        09:02:49   Log-Likelihood:                 201.27
-No. Observations:                 113   AIC:                            -388.5
-Df Residuals:                     106   BIC:                            -369.5
+Dep. Variable:                      y   R-squared:                       0.763
+Model:                            OLS   Adj. R-squared:                  0.750
+Method:                 Least Squares   F-statistic:                     56.87
+Date:                Tue, 15 Aug 2023   Prob (F-statistic):           6.38e-31
+Time:                        11:34:23   Log-Likelihood:                 218.93
+No. Observations:                 113   AIC:                            -423.9
+Df Residuals:                     106   BIC:                            -404.8
 Df Model:                           6                                         
 Covariance Type:            nonrobust                                         
 ==============================================================================
                  coef    std err          t      P>|t|      [0.025      0.975]
 ------------------------------------------------------------------------------
-const          0.0013      0.004      0.308      0.759      -0.007       0.010
-x1             1.0782      0.118      9.114      0.000       0.844       1.313
-x2            -0.3318      0.204     -1.628      0.107      -0.736       0.072
-x3            -0.1096      0.210     -0.523      0.602      -0.525       0.306
-x4            -0.0620      0.286     -0.217      0.829      -0.629       0.505
-x5             0.7097      0.335      2.117      0.037       0.045       1.374
-x6            -0.1342      0.145     -0.927      0.356      -0.421       0.153
+const          0.0045      0.004      1.211      0.229      -0.003       0.012
+x1             1.1065      0.101     10.935      0.000       0.906       1.307
+x2            -0.4402      0.174     -2.525      0.013      -0.786      -0.094
+x3             1.4054      0.179      7.836      0.000       1.050       1.761
+x4            -1.2411      0.245     -5.070      0.000      -1.726      -0.756
+x5            -0.8247      0.287     -2.877      0.005      -1.393      -0.256
+x6            -0.0247      0.124     -0.199      0.843      -0.270       0.221
 ==============================================================================
-Omnibus:                        0.015   Durbin-Watson:                   2.215
-Prob(Omnibus):                  0.993   Jarque-Bera (JB):                0.132
-Skew:                          -0.010   Prob(JB):                        0.936
-Kurtosis:                       2.834   Cond. No.                         91.5
-==============================================================================
-
-Notes:
-[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
-#+end_example
-
-#+begin_src python :session py1 :results none :exports none
-  import getFamaFrenchFactors as gff
-  import yfinance as yf
-  import statsmodels.api as sm
-
-  ticker = 'amzn'
-  start = '2016-8-31'
-  end = '2021-8-31'
-  start = '2014-12-31'
-  end = '2019-12-31'
-  stock_data = yf.download(ticker, start, end)
-
-  ff3_monthly = gff.famaFrench3Factor(frequency='m')
-  #ff3_monthly = gff.famaFrench5Factor(frequency='m')
-  #momentum_monthly = gff.momentumFactor(frequency='m')
-
-  ff3_monthly.rename(columns={"date_ff_factors": 'Date'}, inplace=True)
-  ff3_monthly.set_index('Date', inplace=True)
-
-  stock_returns = stock_data['Close'].resample('M').last().pct_change().dropna()
-  stock_returns.name = "Month_Rtn"
-  ff_data = ff3_monthly.merge(stock_returns,on='Date')
-
-  X = ff_data[['Mkt-RF', 'SMB', 'HML']]
-  y = ff_data['Month_Rtn'] - ff_data['RF']
-  X = sm.add_constant(X)
-  ff_model = sm.OLS(y, X).fit()
-#+end_src
-#+begin_src python :session py1 :results output :exports results
-  print(ff_model.summary())
-#+end_src
-
-#+RESULTS:
-#+begin_example
-                            OLS Regression Results                            
-==============================================================================
-Dep. Variable:                      y   R-squared:                       0.514
-Model:                            OLS   Adj. R-squared:                  0.488
-Method:                 Least Squares   F-statistic:                     19.73
-Date:                Thu, 10 Aug 2023   Prob (F-statistic):           7.48e-09
-Time:                        15:40:50   Log-Likelihood:                 86.579
-No. Observations:                  60   AIC:                            -165.2
-Df Residuals:                      56   BIC:                            -156.8
-Df Model:                           3                                         
-Covariance Type:            nonrobust                                         
-==============================================================================
-                 coef    std err          t      P>|t|      [0.025      0.975]
-------------------------------------------------------------------------------
-const          0.0147      0.008      1.843      0.071      -0.001       0.031
-Mkt-RF         1.5402      0.224      6.886      0.000       1.092       1.988
-SMB           -0.6471      0.338     -1.914      0.061      -1.324       0.030
-HML           -0.9529      0.297     -3.205      0.002      -1.549      -0.357
-==============================================================================
-Omnibus:                        2.723   Durbin-Watson:                   1.576
-Prob(Omnibus):                  0.256   Jarque-Bera (JB):                2.361
-Skew:                           0.485   Prob(JB):                        0.307
-Kurtosis:                       2.949   Cond. No.                         46.3
+Omnibus:                        3.890   Durbin-Watson:                   2.265
+Prob(Omnibus):                  0.143   Jarque-Bera (JB):                3.745
+Skew:                           0.235   Prob(JB):                        0.154
+Kurtosis:                       3.758   Cond. No.                         91.5
 ==============================================================================
 
 Notes:
 [1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
 #+end_example
 
-
+#+NAME: Compute factor model prediction
 #+begin_src python :results none
+  # prediction on test data
   returns_pred = factor_model(df_factors_test[factor_names].to_numpy())
   df_returns_pred = pd.DataFrame(returns_pred,
                                  columns=asset_names,
                                  index=df_assets_test.index)
+  # prediction on training data
+  returns_predt = factor_model(df_factors_train[factor_names].to_numpy())
+  df_returns_predt = pd.DataFrame(returns_predt,
+                                 columns=asset_names,
+                                 index=df_assets_train.index)
+
 #+end_src
 
 *** Factors backtesting
@@ -513,20 +449,24 @@ Notes:
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: predicted_returns0
 #+end_comment
-
+#+NAME: Function to plot returns from factor model
 #+begin_src python :results none
-  def plot_rets_fromfactors(i_asset, name):
+  def plot_rets_fromfactors(df_assets,
+                            df_factors,
+                            df_returns_pred,
+                            i_asset,
+                            name):
 
       i_name = asset_names[i_asset]
       fig1_path= img_dir / f'{name}{i_name}.png'
       fig1 = go.Figure()
       fig1.add_trace(go.Scatter(
-          x=df_assets_test.index,
-          y=df_assets_test.iloc[:, i_asset] - df_factors_test.RF.to_numpy(),
+          x=df_assets.index,
+          y=df_assets.iloc[:, i_asset] - df_factors.RF.to_numpy(),
           mode='lines+markers',
           name=f"{i_name} real"))
       fig1.add_trace(go.Scatter(
-          x=df_assets_test.index,
+          x=df_assets.index,
           y=df_returns_pred[i_name],
           mode='lines',
           name=f"{i_name} pred."))
@@ -540,44 +480,29 @@ Notes:
 
 #+NAME: predicted_returns0
 #+begin_src python :noweb eval :results value file  :exports results
-  fig_path = plot_rets_fromfactors(i_asset=0, name="predicted_returns_")
-  fig_path
+  fig1_path = plot_rets_fromfactors(df_assets_test,
+                                   df_factors_test,
+                                   df_returns_pred,
+                                   i_asset=1, name="predicted_testingreturns_")
+  fig1_path #
 #+end_src
 #+CAPTION:  Backtesting factor approaximation on Google asset
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: predicted_returns0
-[[file:img/predicted_returns_JPM.png]]
+[[file:img/predicted_testingreturns_CMCSA.png]]
 
-
-#+NAME: predicted_returns1
+#+NAME: predicted_returns0traing
 #+begin_src python :noweb eval :results value file  :exports results
-  fig_path = plot_rets_fromfactors(i_asset=1, name="predicted_returns_")
-  fig_path
+  fig1_path = plot_rets_fromfactors(df_assets_train,
+                                   df_factors_train,
+                                   df_returns_predt,
+                                   i_asset=1, name="predicted_trainingreturns_")
+  fig1_path #
 #+end_src
 #+CAPTION:  Backtesting factor approaximation on Google asset
 #+ATTR_LATEX: :width 0.75\textwidth 
-#+RESULTS: predicted_returns1
-[[file:img/predicted_returns_WFC.png]]
-
-#+NAME: predicted_returns2
-#+begin_src python :noweb eval :results value file  :exports results
-  fig_path = plot_rets_fromfactors(i_asset=2, name="predicted_returns_")
-  fig_path
-#+end_src
-#+CAPTION:  Backtesting factor approaximation on Google asset
-#+ATTR_LATEX: :width 0.75\textwidth 
-#+RESULTS: predicted_returns2
-[[file:img/predicted_returns_GS.png]]
-
-#+NAME: predicted_returns3
-#+begin_src python :noweb eval :results value file  :exports results
-  fig_path = plot_rets_fromfactors(i_asset=3, name="predicted_returns_")
-  fig_path
-#+end_src
-#+CAPTION:  Backtesting factor approaximation on Google asset
-#+ATTR_LATEX: :width 0.75\textwidth 
-#+RESULTS: predicted_returns3
-[[file:img/predicted_returns_BKR.png]]
+#+RESULTS: predicted_returns0traing
+[[file:img/predicted_trainingreturns_CMCSA.png]]
 
 ** Generation of asset views
 :PROPERTIES:
@@ -712,7 +637,7 @@ Notes:
   x0 = 1. / num_assets * np.ones(num_assets)
   args = (mu_mkt_assets*12,
           Sigma_assets,
-          0.1)
+          0.15)
   cons_sett = dict(eq_rets=dict(type="eq"),
                    eq_weights1=dict(type="eq"),
                    ieq_weights0=dict(type="ineq")
@@ -726,6 +651,7 @@ Notes:
                                                   ftol=1e-12))
 
   print(np.dot(res1.x, Sigma_assets @ res1.x)**0.5 * 12**0.5 * 100)
+  print(res1.fun**0.5 * 12**0.5 * 100)
   print(sum(res1.x))
   print(res1.x)
 #+end_src
@@ -733,19 +659,18 @@ Notes:
 #+NAME: Function to build portfolios weights
 #+begin_src python :results none
 
-
-  def build_portfolio_weights(mu_targetlist, x0,
-                              mu_mkt, Sigma, cons_sett):
+  def build_portfolio_weights(mu_targetlist,
+                              x0,
+                              mu_portfolio,
+                              Sigma_portfolio,
+                              cons_sett,
+                              annualise=12):
 
       res_list = list()
       for mu_i in mu_targetlist:
-          args = (mu_mkt*12, # annualised
-                  Sigma,
+          args = (mu_portfolio * annualise, # annualised
+                  Sigma_portfolio,
                   mu_i)
-          cons_sett = dict(eq_rets=dict(type="eq"),
-                           eq_weights1=dict(type="eq"),
-                           #ieq_weights0=dict(type="ineq")
-                           )
           res = optimization.scipy_minimize("variance",
                                              x0,
                                              method_name='SLSQP',
@@ -756,21 +681,64 @@ Notes:
           res_list.append(res)
       return res_list
 
-  weights = [ri.x for ri in res_list]
-  vols=[((ri.fun) * 12)**0.5 *100 for ri in res_list]
-  mu_targetlist = np.linspace(3,25,23) * 1e-2
-  weights_vols = {'weights':
-  df_weights_vols = pd.Dataframe(dict(weights=weights,
-                                      vols=vols,
-                                      assets=assets))
+#+end_src
 
+#+NAME: Function to compute weights vs volatility for target returns
+#+begin_src python :results none
+
+  def build_df_weightsvol(assets,
+                          mu_targetlist,
+                          x0,
+                          lmb_p,
+                          mu_portfolio,
+                          Sigma_portfolio,
+                          annualise=12):
+
+      # constraints: returns equal to a number given in mu_targetlist,
+      # weights equal to 1, and all weights greater than 0
+      cons_sett = dict(eq_rets=dict(type="eq"),
+                       eq_weights1=dict(type="eq"),
+                       ieq_weights0=dict(type="ineq")
+                       )
+
+      res_list = build_portfolio_weights(mu_targetlist,
+                                         x0,
+                                         mu_portfolio,
+                                         Sigma_portfolio,
+                                         cons_sett,
+                                         annualise
+                                         )
+
+
+      weights = np.array([ri.x for ri in res_list])
+      Weights = weights.flatten()
+      # anualise vols
+      vols=[((ri.fun) * annualise)**0.5 for ri in res_list]
+      Vols = [vi for vi in vols for i in range(len(assets))]
+      Assets = [k for i in range(len(vols)) for k in assets]
+      df_weights_vols = pd.DataFrame(dict(weights=Weights,
+                                          vols=Vols,
+                                          assets=Assets
+                                          ))
+      return df_weights_vols
+#+end_src
+
+#+NAME: df with portfolios weights
+#+begin_src python :results none
+
+  lmb_p = config.lambda_portfolio[2]
+  x0 = 1. / num_assets * np.ones(num_assets)
+  mu_targetlist = np.linspace(4,18,16) * 1e-2
+  df_weights_vols = build_df_weightsvol(asset_names, mu_targetlist, x0, lmb_p,
+                                        mu_mkt_assets,
+                                        Sigma_assets)
 
 #+end_src
 
 #+NAME: Weights_Composition
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
   fig1_path= img_dir / f'{name}.png'
-  fig = px.area(df_weights_vols, x="vols", y="weights", color="assets",
+  fig1 = px.area(df_weights_vols, x="vols", y="weights", color="assets",
                 #pattern_shape_sequence=[".", "x", "+"],              
                 pattern_shape="assets"
                 )
@@ -778,8 +746,8 @@ Notes:
   fig1_path
 #+end_src
 
-
-
+#+RESULTS: Weights_Composition
+[[file:img/Weights_Composition.png]]
 
 
 #+begin_src python :results none
@@ -803,7 +771,6 @@ Notes:
 
 #+RESULTS: P&L_plot
 [[file:img/P&L_plot.png]]
-
 
 
 *** Analysis and discussion
