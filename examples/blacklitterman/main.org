@@ -55,6 +55,7 @@
   img_dir = pathlib.Path("./img/")
   #img_dir = img_dir0.absolute()
   img_dir.mkdir(parents=True, exist_ok=True)
+  warnings.filterwarnings("ignore")
 #+end_src
 
 * Introduction
@@ -227,19 +228,19 @@ The parameters of the ARIMA model are defined as follows:
            tablefmt='orgtbl')
 #+end_src
 #+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption  
-#+RESULTS: Compute and show df_portfolio_summary
-|       |   marketCap | marketWeights | sector                 |
-|-------+-------------+---------------+------------------------|
-| JPM   | 4.46929e+11 |      0.491942 | Financial Services     |
-| CMCSA | 1.88765e+11 |      0.207776 | Communication Services |
-| ADI   | 9.26671e+10 |         0.102 | Technology             |
-| PH    | 5.41743e+10 |     0.0596305 | Industrials            |
-| DXCM  | 4.30121e+10 |     0.0473441 | Healthcare             |
-| TSCO  | 2.45608e+10 |     0.0270344 | Consumer Cyclical      |
-| AEE   |  2.1274e+10 |     0.0234166 | Utilities              |
-| CAG   | 1.49224e+10 |     0.0164254 | Consumer Defensive     |
-| CE    | 1.37345e+10 |     0.0151178 | Basic Materials        |
-| FRT   | 8.46088e+09 |    0.00931302 | Real Estate            |
+#+RESULTS: Compute and show Data Frame, df_portfolio_summary
+|      |   marketCap | marketWeights | sector                 |
+|------+-------------+---------------+------------------------|
+| JPM  | 4.46929e+11 |      0.544416 | Financial Services     |
+| CVS  | 9.56394e+10 |      0.116501 | Healthcare             |
+| ATVI | 7.18864e+10 |     0.0875667 | Communication Services |
+| PH   | 5.41743e+10 |     0.0659911 | Industrials            |
+| WELL | 4.24812e+10 |     0.0517475 | Real Estate            |
+| YUM  |   3.733e+10 |     0.0454727 | Consumer Cyclical      |
+| KR   | 3.53562e+10 |     0.0430683 | Consumer Defensive     |
+| ATO  | 1.69743e+10 |     0.0206769 | Utilities              |
+| EQT  | 1.59304e+10 |     0.0194052 | Energy                 |
+| DXC  | 4.23124e+09 |    0.00515418 | Technology             |
 
 *** Assets exploratory analysis
 
@@ -252,18 +253,18 @@ The parameters of the ARIMA model are defined as follows:
 #+end_src
 #+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption  
 #+RESULTS: df_assets
-|                     |        JPM |      CMCSA |        ADI |          PH |        DXCM |       TSCO |          AEE |         CAG |         CE |         FRT |
-|---------------------+------------+------------+------------+-------------+-------------+------------+--------------+-------------+------------+-------------|
-| 2011-03-01 00:00:00 | -0.0126365 | -0.0403727 | -0.0125376 |    0.061673 |   0.0608339 |   0.149606 |   0.00393421 |    0.025475 |  0.0704463 |  -0.0311238 |
-| 2011-04-01 00:00:00 | -0.0101952 |  0.0602751 |  0.0236161 | -0.00380229 |   0.0728092 |  0.0335783 |    0.0441753 |   0.0294736 |   0.125085 |   0.0735655 |
-| 2011-05-01 00:00:00 | -0.0523778 | -0.0370088 |  0.0213346 |  -0.0579941 |  -0.0528528 |  0.0208502 |    0.0136472 |   0.0400818 |  0.0434696 |  0.00045684 |
-| 2011-06-01 00:00:00 | -0.0531916 | 0.00396198 | -0.0493077 |   0.0100169 |  -0.0811668 |   0.058898 |    -0.029283 |    0.014943 |   0.023421 |  -0.0276256 |
-| 2011-07-01 00:00:00 | -0.0119687 | -0.0520915 |  -0.121104 |   -0.119456 |   -0.021394 | -0.0143541 | -0.000693497 | -0.00774901 |  0.0341399 |    0.025358 |
-| 2011-08-01 00:00:00 | -0.0714462 |  -0.104496 | -0.0401163 |  -0.0707415 |   -0.151622 |  -0.069023 |    0.0499653 |  -0.0464662 |  -0.147288 |    0.036753 |
-| 2011-09-01 00:00:00 |  -0.198083 | -0.0274291 | -0.0536039 |    -0.14027 | -0.00249374 |  0.0189017 |    -0.016193 | -0.00818998 |   -0.30802 |  -0.0898951 |
-| 2011-10-01 00:00:00 |    0.15405 |   0.120937 |    0.17024 |    0.291779 |   -0.184167 |   0.134496 |    0.0708767 |   0.0458299 |   0.338764 |   0.0770537 |
-| 2011-11-01 00:00:00 |  -0.109033 | -0.0332623 | -0.0467596 |   0.0150827 |   -0.180797 |  0.0181844 |    0.0605396 | -0.00276358 |  0.0675087 | -0.00371791 |
-| 2011-12-01 00:00:00 |  0.0736197 |  0.0458756 |  0.0263912 |  -0.0788838 |    0.160848 | -0.0287969 |   -0.0201124 |   0.0451306 | -0.0477522 |   0.0262354 |
+|                     |       AMZN |        CVS |        ATVI |         AFL |        PAYX |       WELL |          KR |         ATO |         GEN |         RHI |
+|---------------------+------------+------------+-------------+-------------+-------------+------------+-------------+-------------+-------------+-------------|
+| 2011-03-01 00:00:00 |  0.0394714 |  0.0381125 |  -0.0134892 |   -0.103296 |  -0.0666072 |  0.0042129 |   0.0467249 |  0.00827909 |   0.0282862 |  -0.0407523 |
+| 2011-04-01 00:00:00 |  0.0870482 |  0.0553614 |   0.0373746 |   0.0646078 |   0.0420516 |  0.0253624 |   0.0141844 |   0.0231672 |   0.0598705 | -0.00882354 |
+| 2011-05-01 00:00:00 | 0.00449422 |  0.0681943 |   0.0536028 |   -0.149493 |  -0.0125344 | -0.0107867 |    0.020979 |  -0.0441387 | -0.00508908 |   -0.090999 |
+| 2011-06-01 00:00:00 |  0.0396562 | -0.0286895 |  -0.0258548 |  -0.0232266 |  -0.0489164 | -0.0142884 | -0.00080582 | -0.00299846 |  0.00869566 |  -0.0195865 |
+| 2011-07-01 00:00:00 |  0.0881706 | -0.0327303 |   0.0136986 |  -0.0132819 |  -0.0810547 | 0.00667554 |  0.00282265 |  0.00541354 |  -0.0334686 |   0.0129485 |
+| 2011-08-01 00:00:00 | -0.0327611 | -0.0121045 | 0.000844614 |   -0.181068 |  -0.0442791 | -0.0344828 |   -0.052674 |  0.00329048 |    -0.10021 |    -0.12637 |
+| 2011-09-01 00:00:00 | 0.00464612 |  -0.064606 |  0.00421934 |  -0.0734359 |  -0.0226093 | -0.0816327 |  -0.0679117 |  -0.0324985 |  -0.0495627 |   -0.112876 |
+| 2011-10-01 00:00:00 | -0.0125792 |  0.0815719 |     0.12521 |    0.290129 |    0.105044 |   0.125855 |   0.0555556 |   0.0576271 |   0.0435583 |    0.245523 |
+| 2011-11-01 00:00:00 | -0.0993864 |  0.0690889 |  -0.0724421 |  -0.0365935 | -0.00102947 | -0.0478269 |           0 | -0.00320515 |  -0.0388007 |  0.00227013 |
+| 2011-12-01 00:00:00 | -0.0997972 |  0.0499485 | -0.00805156 | -0.00414365 |   0.0343525 |  0.0869045 |   0.0448662 |  -0.0251389 |  -0.0428135 |   0.0743677 |
 
 #+NAME: basket_returns
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
@@ -525,32 +526,136 @@ Notes:
 [[file:img/arima_autocorrelation.png]]
 
 #+begin_src python :results none
-  X = df_factors_train[factor_names].to_numpy()
-  arima_train_models = model_stats.arima_fit(X, factor_names, (2,1,0))
-#+end_src
-
-#+begin_src python :results none
-  arima_train_models['Mkt-RF'].summary()
-#+end_src
-
-*** ARIMA model prediction
-#+begin_src python :results none
   Xtrain = df_factors_train[factor_names].to_numpy()
   Xtest = df_factors_test[factor_names].to_numpy()
   index_train = df_factors_train.index
   index_test = df_factors_test.index
-  arima_train_models = model_stats.arima_fit(X, factor_names, (2,1,0))
-#+end_src
-
-#+begin_src python :results none
+  arima_parameters = {'Mkt-RF': (14,2,10),
+                      'SMB': (2,1,0),
+                      'HML': (2,1,0),
+                      'RMW': (2,1,0),
+                      'CMA': (3,2,0),
+                      'MOM': (2,1,0)
+                      }
+  model_sett = dict(enforce_stationarity=False,
+                    enforce_invertibility=False) 
+  arima_train_models = model_stats.arima_fit(Xtrain,
+                                             factor_names,
+                                             arima_parameters,
+                                             model_sett=model_sett)
   df_arimatrain, df_arimatest = model_stats.arima_build_pred(arima_train_models,
-                                                             Xtrain, Xtest,
+                                                             Xtrain,
+                                                             Xtest,
                                                              factor_names,
                                                              index_train,
-                                                             index_test)
+                                                             index_test)  
+#+end_src
 
+#+begin_src python :results output
+  print(arima_train_models['Mkt-RF'].summary())
+#+end_src
+
+#+RESULTS:
+#+begin_example
+                               SARIMAX Results                                
+==============================================================================
+Dep. Variable:                      y   No. Observations:                  113
+Model:               ARIMA(14, 2, 10)   Log Likelihood                 185.942
+Date:                Tue, 15 Aug 2023   AIC                           -321.885
+Time:                        13:43:35   BIC                           -257.517
+Sample:                             0   HQIC                          -295.858
+                                - 113                                         
+Covariance Type:                  opg                                         
+==============================================================================
+                 coef    std err          z      P>|z|      [0.025      0.975]
+------------------------------------------------------------------------------
+ar.L1         -2.5725      0.630     -4.084      0.000      -3.807      -1.338
+ar.L2         -4.0994      1.437     -2.852      0.004      -6.916      -1.282
+ar.L3         -5.3448      2.115     -2.527      0.012      -9.491      -1.199
+ar.L4         -6.3109      2.596     -2.431      0.015     -11.399      -1.222
+ar.L5         -7.0200      2.870     -2.446      0.014     -12.646      -1.394
+ar.L6         -7.2300      3.045     -2.374      0.018     -13.199      -1.261
+ar.L7         -6.6472      3.097     -2.146      0.032     -12.718      -0.576
+ar.L8         -5.5848      2.936     -1.902      0.057     -11.339       0.169
+ar.L9         -4.4234      2.612     -1.693      0.090      -9.543       0.696
+ar.L10        -3.1031      2.194     -1.414      0.157      -7.404       1.197
+ar.L11        -1.8092      1.745     -1.037      0.300      -5.230       1.612
+ar.L12        -0.9664      1.296     -0.746      0.456      -3.506       1.573
+ar.L13        -0.5024      0.788     -0.638      0.524      -2.047       1.042
+ar.L14        -0.2345      0.305     -0.768      0.443      -0.833       0.364
+ma.L1          0.5390      0.574      0.938      0.348      -0.587       1.665
+ma.L2          0.0026      0.498      0.005      0.996      -0.973       0.978
+ma.L3         -0.4013      0.366     -1.096      0.273      -1.119       0.316
+ma.L4         -0.5210      0.461     -1.130      0.259      -1.425       0.383
+ma.L5          0.0350      0.539      0.065      0.948      -1.020       1.090
+ma.L6         -0.1929      0.402     -0.480      0.631      -0.980       0.595
+ma.L7         -0.6095      0.345     -1.769      0.077      -1.285       0.066
+ma.L8         -0.0968      0.346     -0.279      0.780      -0.776       0.582
+ma.L9          0.1733      0.338      0.513      0.608      -0.489       0.836
+ma.L10         0.1687      0.253      0.667      0.505      -0.327       0.664
+sigma2         0.0011      0.000      2.897      0.004       0.000       0.002
+===================================================================================
+Ljung-Box (L1) (Q):                   0.00   Jarque-Bera (JB):                 1.82
+Prob(Q):                              0.99   Prob(JB):                         0.40
+Heteroskedasticity (H):               2.55   Skew:                            -0.29
+Prob(H) (two-sided):                  0.01   Kurtosis:                         3.34
+===================================================================================
+
+Warnings:
+[1] Covariance matrix calculated using the outer product of gradients (complex-step).
+#+end_example
+
+*** ARIMA model prediction
+
+#+NAME: ARIMA_Mkt-RF_train
+#+begin_src python :results value file :exports results :var name=(org-element-property :name (org-element-context))
+  fig1_path= img_dir / f'{name}.png'
+  fig1 = px.line(df_arimatrain, y=['Mkt-RF','Mkt-RF_pred'])
+  fig1.write_image(fig1_path)
+  fig1_path #
 
 #+end_src
+#+CAPTION: d
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: ARIMA_Mkt-RF_train
+[[file:img/ARIMA_Mkt-RF_train.png]]
+
+#+NAME: ARIMA_Mkt-RF_test
+#+begin_src python :results value file :exports results :var name=(org-element-property :name (org-element-context))
+  fig1_path= img_dir / f'{name}.png'
+  fig1 = px.line(df_arimatest, y=['Mkt-RF','Mkt-RF_pred'])
+  fig1.write_image(fig1_path)
+  fig1_path #
+
+#+end_src
+#+CAPTION: d
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: ARIMA_Mkt-RF_test
+[[file:img/ARIMA_Mkt-RF_test.png]]
+
+*** ARIMA backtesting
+
+#+begin_src python :results none
+  # prediction on test data
+  fnames_prediction = [k for k in df_arimatrain.columns if "_pred" in k]
+  asset_names_pred = [k + '_pred' for k in asset_names]
+  returns_arimapred_train = factor_model(df_arimatrain[fnames_prediction].to_numpy())
+  df_arimapred_train = pd.DataFrame(returns_arimapred_train,
+                                    columns=asset_names_pred,
+                                    index=df_assets_train.index)
+  df_arimaasset_train = df_arimapred_train.join(df_assets_train).dropna()
+  # prediction on training data
+  returns_arimapred_test = factor_model(df_arimatest[fnames_prediction].to_numpy())
+  df_arimapred_test = pd.DataFrame(returns_arimapred_test,
+                                    columns=asset_names_pred,
+                                    index=df_assets_test.index)
+  df_arimaasset_test = df_arimapred_test.join(df_assets_test).dropna()
+  # prediction on training data
+  df_arimatest_profits = ml4qf.utils.profit_portfolio(
+      df_arimaasset_test,
+      {k: 1. for k in df_arimaasset_test.columns})
+#+end_src
+
 
 ** Black-Litterman based portfolio
 :PROPERTIES:
@@ -771,7 +876,6 @@ Notes:
 
 #+RESULTS: P&L_plot
 [[file:img/P&L_plot.png]]
-
 
 *** Analysis and discussion
 
