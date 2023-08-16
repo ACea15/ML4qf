@@ -3,6 +3,7 @@ from statsmodels.tsa.arima.model import ARIMA
 from sklearn.metrics import mean_squared_error
 import numpy as np
 import pandas as pd
+import itertools
 def regression_OLS(X, y):
     model = sm.OLS(y, X)
     model = model.fit()
@@ -55,9 +56,10 @@ def arima_build_pred(arima_model, Xtrain, Xtest,
     len_test = len(Xtest)    
     for i, k in enumerate(model_names):
         train_dict[k] = Xtrain[:, i]
-        train_dict[k+"_pred"] = arima_model[k].predict(0, len_train-1)
+        train_dict[k+"_pred"] = arima_model[k].predict(0, len_train - 1)
         test_dict[k] = Xtest[:, i]
-        test_dict[k+"_pred"] = arima_model[k].predict(len_train, len_train + len_test -1)
+        test_dict[k+"_pred"] = arima_model[k].predict(len_train,
+                                                      len_train + len_test -  1)
     df_train = pd.DataFrame(train_dict, index=index_train)
     df_test = pd.DataFrame(test_dict, index=index_test)
     return df_train, df_test
@@ -77,3 +79,42 @@ def err_rmse(y, yhat):
 # # density plot of residuals
 # residuals.plot(kind='kde')
 # pyplot.show()
+
+def arima_hyperparameters(df_train,
+                          df_test,
+                          var_names,
+                          p_vect,
+                          d_vect,
+                          q_vect,
+                          err_fun,
+                          model_sett=None,
+                          ):
+
+    Xtrain = df_train[var_names].to_numpy()
+    Xtest = df_test[var_names].to_numpy()
+    index_train = df_train.index
+    index_test = df_test.index
+    errs_train = {}
+    errs_test = {}
+    for p, d, q in itertools.product([p_vect,
+                                      d_vect,
+                                      q_vect]):
+        arima_parameters = {k: (p, d, q) for k in var_names}
+        arima_train_models = arima_fit(Xtrain,
+                                       var_names,
+                                       arima_parameters,
+                                       model_sett=model_sett)
+        df_arimatrain, df_arimatest = arima_build_pred(
+            arima_train_models,
+            Xtrain,
+            Xtest,
+            var_names,
+            index_train,
+            index_test)
+        for k in var_names:
+            rvar = f"{k}_{p}_{d}_{q}"
+            errs_train[rvar]  = err_fun(df_arimatrain[k],
+                                        df_arimatrain[k + "_pred"])
+            errs_test[rvar]  = err_fun(df_arimatest[k],
+                                        df_arimatest[k + "_pred"])
+    return errs_train, errs_test       
