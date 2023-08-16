@@ -1,4 +1,5 @@
 import datetime
+import numpy as np
 
 index_weblist = 'http://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
 info_sp500 = ["marketCap", "sector"]
@@ -75,3 +76,22 @@ split_data_idx = int(train_test_ratio * days * 12 / 365)
 
 lambda_mkt = 2.24
 lambda_portfolio = [0.1, 2.24, 6]
+
+compute_arima_parameters = False
+
+arima_parameters = {'Mkt-RF': (15,0,15),
+                    'SMB': (15,0,9),
+                    'HML': (6,0,3),
+                    'RMW': (15,0,6),
+                    'CMA': (6,4,12),
+                    'MOM': (9,0,6)
+                    }
+
+P = np.zeros((3,10))
+P[0][8] = 1.
+P[1][0] = -1
+P[1][3] = 1
+P[2][6] = 1
+P[2][7] = -1
+Q = np.array([0.09, 0.08, 0.06]) / 12
+tau = 0.1

@@ -55,6 +55,7 @@
   img_dir = pathlib.Path("./img/")
   #img_dir = img_dir0.absolute()
   img_dir.mkdir(parents=True, exist_ok=True)
+  import warnings
   warnings.filterwarnings("ignore")
 #+end_src
 
@@ -164,19 +165,22 @@ The parameters of the ARIMA model are defined as follows:
 * Results
 ** Portfolio and Factor analysis
 :PROPERTIES:
-:header-args: :session py1 :tangle yes :comments org
+:header-args: :session py1 :tangle yes
 :END:
 *** Asset selection
-#+NAME: Load index 
-#+begin_src python  :results none
+#+NAME: Load index SP500
+#+begin_src python :results none
+  # Load index SP500
   sp500 = financial_features.FinancialData("^GSPC",
                                            config.start_date_assets,
-                                           config.end_date_assets)
+                                           config.end_date_assets,
+                                           DATA_FOLDER="./data")
   df_sp500 = sp500.df[['returns']].dropna()
 #+end_src
 
 #+NAME: Load portfolio and calculate market weights
-#+begin_src python  :results none
+#+begin_src python :results none
+  # Load portfolio and calculate market weights
   tickers_sp500 = ml4qf.collectors.scrap_tickers_index(config.index_weblist)
   df_tickers_sp500 = ml4qf.collectors.get_tickers_info(tickers_sp500,
                                                        config.info_sp500,
@@ -215,7 +219,8 @@ The parameters of the ARIMA model are defined as follows:
 #+end_src
 
 #+NAME: Compute and show Data Frame, df_portfolio_summary
-#+begin_src python :results raw :exports results
+#+begin_src python :results raw :exports results :tangle no
+  # Compute Data Frame df_portfolio_summary
   df_portfolio_summary = df_selected_tickers.copy()
   #df_portfolio_summary = df_portfolio_summary.drop('first_date', axis=1)
   df_portfolio_summary['marketWeights'] = w_mkt
@@ -245,7 +250,7 @@ The parameters of the ARIMA model are defined as follows:
 *** Assets exploratory analysis
 
 #+NAME: df_assets
-#+begin_src python :session py1 :results raw :exports results
+#+begin_src python :session py1 :results raw :exports results :tangle no
   tabulate(df_assets.iloc[:10],
            headers=asset_names,
            showindex=True,
@@ -253,33 +258,37 @@ The parameters of the ARIMA model are defined as follows:
 #+end_src
 #+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption  
 #+RESULTS: df_assets
-|                     |       AMZN |        CVS |        ATVI |         AFL |        PAYX |       WELL |          KR |         ATO |         GEN |         RHI |
-|---------------------+------------+------------+-------------+-------------+-------------+------------+-------------+-------------+-------------+-------------|
-| 2011-03-01 00:00:00 |  0.0394714 |  0.0381125 |  -0.0134892 |   -0.103296 |  -0.0666072 |  0.0042129 |   0.0467249 |  0.00827909 |   0.0282862 |  -0.0407523 |
-| 2011-04-01 00:00:00 |  0.0870482 |  0.0553614 |   0.0373746 |   0.0646078 |   0.0420516 |  0.0253624 |   0.0141844 |   0.0231672 |   0.0598705 | -0.00882354 |
-| 2011-05-01 00:00:00 | 0.00449422 |  0.0681943 |   0.0536028 |   -0.149493 |  -0.0125344 | -0.0107867 |    0.020979 |  -0.0441387 | -0.00508908 |   -0.090999 |
-| 2011-06-01 00:00:00 |  0.0396562 | -0.0286895 |  -0.0258548 |  -0.0232266 |  -0.0489164 | -0.0142884 | -0.00080582 | -0.00299846 |  0.00869566 |  -0.0195865 |
-| 2011-07-01 00:00:00 |  0.0881706 | -0.0327303 |   0.0136986 |  -0.0132819 |  -0.0810547 | 0.00667554 |  0.00282265 |  0.00541354 |  -0.0334686 |   0.0129485 |
-| 2011-08-01 00:00:00 | -0.0327611 | -0.0121045 | 0.000844614 |   -0.181068 |  -0.0442791 | -0.0344828 |   -0.052674 |  0.00329048 |    -0.10021 |    -0.12637 |
-| 2011-09-01 00:00:00 | 0.00464612 |  -0.064606 |  0.00421934 |  -0.0734359 |  -0.0226093 | -0.0816327 |  -0.0679117 |  -0.0324985 |  -0.0495627 |   -0.112876 |
-| 2011-10-01 00:00:00 | -0.0125792 |  0.0815719 |     0.12521 |    0.290129 |    0.105044 |   0.125855 |   0.0555556 |   0.0576271 |   0.0435583 |    0.245523 |
-| 2011-11-01 00:00:00 | -0.0993864 |  0.0690889 |  -0.0724421 |  -0.0365935 | -0.00102947 | -0.0478269 |           0 | -0.00320515 |  -0.0388007 |  0.00227013 |
-| 2011-12-01 00:00:00 | -0.0997972 |  0.0499485 | -0.00805156 | -0.00414365 |   0.0343525 |  0.0869045 |   0.0448662 |  -0.0251389 |  -0.0428135 |   0.0743677 |
+|                     |        JPM |        CVS |       ATVI |         PH |        WELL |        YUM |          KR |        ATO |        EQT |        DXC |
+|---------------------+------------+------------+------------+------------+-------------+------------+-------------+------------+------------+------------|
+| 2000-03-01 00:00:00 |  0.0949765 |  0.0732143 | -0.0492617 |   0.139655 |   -0.100402 |   0.166667 |    0.175732 | -0.0437956 |   0.187086 | 0.00396511 |
+| 2000-04-01 00:00:00 |   -0.17276 |    0.15807 |  -0.481865 |   0.125567 |    0.138393 |  0.0905433 |   0.0569395 | -0.0305344 |  0.0348675 |  0.0308057 |
+| 2000-05-01 00:00:00 |  0.0355287 |          0 | -0.0099994 |  -0.103495 |  0.00784314 |  -0.134686 |   0.0707071 |   0.153543 |  0.0727763 |   0.174713 |
+| 2000-06-01 00:00:00 | -0.0748954 | -0.0804598 |  0.0505057 |  -0.178411 |   0.0126459 | -0.0362472 |    0.110063 | -0.0435154 | -0.0298367 |  -0.220483 |
+| 2000-07-01 00:00:00 |  0.0814111 |    -0.0125 |   0.346154 |  0.0383212 |    0.106628 |  -0.141593 |  -0.0623229 |    0.17752 |  0.0786662 |  -0.171548 |
+| 2000-08-01 00:00:00 |   0.121706 |  -0.059731 |        0.6 | -0.0210896 |  0.00347222 |   0.201675 |   0.0974321 | 0.00606061 |  0.0816327 |   0.277778 |
+| 2000-09-01 00:00:00 |  -0.173378 |    0.24695 |  0.0714283 | -0.0305206 |   -0.017301 |  0.0509384 | -0.00619416 | -0.0060241 |   0.125694 | -0.0608695 |
+| 2000-10-01 00:00:00 |  -0.014885 |    0.14305 | -0.0791664 |   0.225926 | -0.00352113 | -0.0204083 |           0 |   0.121212 | -0.0850382 |  -0.151515 |
+| 2000-11-01 00:00:00 |   -0.18956 |  0.0743802 |  -0.248869 | -0.0649546 |  -0.0459364 |        0.2 |    0.174515 |  0.0864865 |  -0.038793 |  0.0823413 |
+| 2000-12-01 00:00:00 |   0.232203 |  0.0538462 |   0.457832 |   0.140549 |   -0.037037 | -0.0833332 |   0.0212264 | -0.0298507 |   0.197309 |   -0.11824 |
 
 #+NAME: basket_returns
-#+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
+#+begin_src python :results value file  :exports results :var name=(org-element-property  :name (org-element-context))
+  # Plot basket_returns
   fig1_path= img_dir / f'{name}.png'
   fig1 = px.line(df_assets, y=df_assets.keys())
   fig1.write_image(fig1_path)
   fig1_path #
 #+end_src
+
 #+CAPTION:  Asset's basket returns
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: basket_returns
-[[file:./img/basket_returns.png]]
+[[file:img/basket_returns.png]]
+
 
 #+NAME: AssetsCorrelation
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
+  # Plot AssetsCorrelation
   fig1_path= img_dir / f'{name}.png'
   df_corr = df_assets.corr().round(2)
   fig1 = px.imshow(np.abs(df_corr))
@@ -296,6 +305,7 @@ The parameters of the ARIMA model are defined as follows:
 *** Factor collection
 #+NAME: Load Fama and French 5 factors and Momentum factor  
 #+begin_src python  :results none
+  # Load Fama and French 5 factors and Momentum factor
   factor_names = financial_factors.get_factor_names(config.FACTORS)  
   df_factors0 = financial_factors.get_factors(config.FACTORS.keys(), 'm')
   df_factors =  ml4qf.utils.trim_df_date(df_factors0, start_date=config.start_date_factors,
@@ -304,8 +314,9 @@ The parameters of the ARIMA model are defined as follows:
                                           split_index=config.split_data_idx)
 #+end_src
 
-#+NAME: Plot monthly Factors evolution 
+#+NAME: Factors_evolution 
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
+  # Plot monthly Factors evolution 
   fig1_path= img_dir / f'{name}.png'
   fig1 = px.line(df_factors, y=factor_names)
   fig1.write_image(fig1_path)
@@ -313,11 +324,11 @@ The parameters of the ARIMA model are defined as follows:
 #+end_src
 #+CAPTION: Factors evolution
 #+ATTR_LATEX: :width 0.75\textwidth 
-#+RESULTS: Plot Factors evolution
-[[file:img/Plot Factors evolution.png]]
+#+RESULTS: Factors_evolution
+[[file:img/Factors_evolution.png]]
 
-#+NAME: RF rate evolution
-#+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
+#+NAME: RFrate_evolution
+#+begin_src python :results value file  :exports results :var name=(org-element-property  :name (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
   fig1 = px.line(df_factors*12, y='RF')
   fig1.write_image(fig1_path)
@@ -325,11 +336,13 @@ The parameters of the ARIMA model are defined as follows:
 #+end_src
 #+CAPTION: (Annualised) risk-free rate evolution
 #+ATTR_LATEX: :width 0.75\textwidth 
-#+RESULTS: RF rate evolution
-[[file:img/RF rate evolution.png]]
+#+RESULTS: RFrate_evolution
+[[file:img/RFrate_evolution.png]]
+
 *** Factor regression
 #+NAME: Compute regression on assets returns vs factors
 #+begin_src python :results none
+  # Compute regression on assets returns vs factors
   factor_models = financial_factors.factors_regression(factor_names,
                                                        df_factors_train,
                                                        df_assets_train,
@@ -339,7 +352,7 @@ The parameters of the ARIMA model are defined as follows:
 #+end_src
 
 #+NAME: Data Frame df_train_factors with alphas and betas
-#+begin_src python  :results raw :exports results
+#+begin_src python  :results raw :exports results :tangle no
   albe = np.vstack([alpha, beta]).T
   df_index = asset_names
   df_columns = ['alpha'] + factor_names
@@ -348,22 +361,22 @@ The parameters of the ARIMA model are defined as follows:
 #+end_src
 #+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption
 #+RESULTS: Data Frame df_train_factors with alphas and betas
-|       |       alpha |   Mkt-RF |        SMB |       HML |        RMW |        CMA |        MOM |
-|-------+-------------+----------+------------+-----------+------------+------------+------------|
-| JPM   |  0.00445065 |  1.10652 |  -0.440155 |   1.40538 |   -1.24112 |  -0.824686 | -0.0246697 |
-| CMCSA |   0.0013236 |  1.07818 |  -0.331769 | -0.109582 | -0.0620382 |   0.709663 |  -0.134245 |
-| ADI   |  0.00284991 |   1.0065 |   0.470268 | 0.0107203 |   0.101693 |  -0.426269 |  -0.367543 |
-| PH    |  -0.0023811 |  1.37354 |   0.543136 |  0.193102 |   0.399803 | -0.0483402 |  -0.298496 |
-| DXCM  |   0.0303054 | 0.374555 |    1.41041 |  -1.78457 |  -0.936454 |    -1.1328 |  -0.356339 |
-| TSCO  |  0.00455325 |  1.09016 |    0.55251 |  -0.63082 |   0.675689 |   0.972401 |  0.0849717 |
-| AEE   |  0.00366709 | 0.476508 |  -0.136473 |  0.185148 |   0.372146 |   0.239563 |   0.481544 |
-| CAG   |  -0.0011143 | 0.831855 |  -0.189053 | -0.238849 |   0.631176 |    1.16124 |  0.0633045 |
-| CE    | 0.000539305 |  1.33332 | -0.0800048 |  0.681784 | -0.0613478 |  -0.528645 |  -0.129299 |
-| FRT   | -0.00442393 | 0.574232 |   0.542634 |  0.401857 |   0.960915 |  -0.118601 |   0.184955 |
+|      |        alpha |   Mkt-RF |       SMB |       HML |      RMW |        CMA |        MOM |
+|------+--------------+----------+-----------+-----------+----------+------------+------------|
+| JPM  |   0.00647651 | 0.922232 |  -0.28544 |   1.18559 | -1.07209 |  -0.493312 |  -0.273228 |
+| CVS  |  -0.00148262 | 0.868157 | -0.215823 |  0.012167 |  0.25336 |    1.07393 |   0.026691 |
+| ATVI |    0.0197562 | 0.889834 |  0.242885 | -0.206069 | -0.47066 |   0.212356 |    0.39213 |
+| PH   |  -0.00382804 |  1.49288 |  0.446137 | -0.124334 |  1.14579 |   0.475606 |  -0.236351 |
+| WELL |  0.000788633 |  0.58505 |  0.356454 |  0.135987 | 0.250443 |   0.247888 | -0.0239137 |
+| YUM  |   0.00341028 | 0.876246 |  0.410095 | -0.205616 |  1.00998 |  0.0557652 |  -0.120782 |
+| KR   | -7.80218e-05 | 0.758796 | -0.304005 | -0.211342 | 0.349079 |   0.986875 |   0.149481 |
+| ATO  |   0.00152634 | 0.401037 |  0.208798 |  -0.14717 | 0.374291 |   0.563191 |  0.0033396 |
+| EQT  |  -0.00322677 |  1.09022 |  0.140145 | -0.317918 | 0.955749 |   0.672032 | -0.0193002 |
+| DXC  |  -0.00517583 |  1.47021 | -0.098542 | 0.0172014 | 0.263557 | 0.00627073 |  -0.250473 |
 
 #+NAME: Summary of factors OLS
-#+begin_src python :results output :exports results
-  print(factor_models[df_assets.keys()[0]].summary())
+#+begin_src python :results output :exports results :tangle no
+  print(factor_models[asset_names[3]].summary())
 #+end_src
 #+ATTR_LATEX: :width 0.7\textwidth
 #+CAPTION: Summary of factors OLS
@@ -371,30 +384,30 @@ The parameters of the ARIMA model are defined as follows:
 #+begin_example
                             OLS Regression Results                            
 ==============================================================================
-Dep. Variable:                      y   R-squared:                       0.763
-Model:                            OLS   Adj. R-squared:                  0.750
-Method:                 Least Squares   F-statistic:                     56.87
-Date:                Tue, 15 Aug 2023   Prob (F-statistic):           6.38e-31
-Time:                        11:34:23   Log-Likelihood:                 218.93
-No. Observations:                 113   AIC:                            -423.9
-Df Residuals:                     106   BIC:                            -404.8
+Dep. Variable:                      y   R-squared:                       0.607
+Model:                            OLS   Adj. R-squared:                  0.597
+Method:                 Least Squares   F-statistic:                     61.61
+Date:                Wed, 16 Aug 2023   Prob (F-statistic):           8.36e-46
+Time:                        11:21:06   Log-Likelihood:                 370.35
+No. Observations:                 246   AIC:                            -726.7
+Df Residuals:                     239   BIC:                            -702.2
 Df Model:                           6                                         
 Covariance Type:            nonrobust                                         
 ==============================================================================
                  coef    std err          t      P>|t|      [0.025      0.975]
 ------------------------------------------------------------------------------
-const          0.0045      0.004      1.211      0.229      -0.003       0.012
-x1             1.1065      0.101     10.935      0.000       0.906       1.307
-x2            -0.4402      0.174     -2.525      0.013      -0.786      -0.094
-x3             1.4054      0.179      7.836      0.000       1.050       1.761
-x4            -1.2411      0.245     -5.070      0.000      -1.726      -0.756
-x5            -0.8247      0.287     -2.877      0.005      -1.393      -0.256
-x6            -0.0247      0.124     -0.199      0.843      -0.270       0.221
+const         -0.0038      0.004     -1.031      0.304      -0.011       0.003
+x1             1.4929      0.096     15.580      0.000       1.304       1.682
+x2             0.4461      0.138      3.232      0.001       0.174       0.718
+x3            -0.1243      0.155     -0.801      0.424      -0.430       0.181
+x4             1.1458      0.175      6.534      0.000       0.800       1.491
+x5             0.4756      0.233      2.043      0.042       0.017       0.934
+x6            -0.2364      0.076     -3.108      0.002      -0.386      -0.087
 ==============================================================================
-Omnibus:                        3.890   Durbin-Watson:                   2.265
-Prob(Omnibus):                  0.143   Jarque-Bera (JB):                3.745
-Skew:                           0.235   Prob(JB):                        0.154
-Kurtosis:                       3.758   Cond. No.                         91.5
+Omnibus:                        2.827   Durbin-Watson:                   2.164
+Prob(Omnibus):                  0.243   Jarque-Bera (JB):                3.056
+Skew:                          -0.008   Prob(JB):                        0.217
+Kurtosis:                       3.546   Cond. No.                         75.0
 ==============================================================================
 
 Notes:
@@ -403,6 +416,7 @@ Notes:
 
 #+NAME: Compute factor model prediction
 #+begin_src python :results none
+  # Compute factor model prediction
   # prediction on test data
   returns_pred = factor_model(df_factors_test[factor_names].to_numpy())
   df_returns_pred = pd.DataFrame(returns_pred,
@@ -442,7 +456,7 @@ Notes:
 #+end_src
 
 #+NAME: predicted_returns0
-#+begin_src python :noweb eval :results value file  :exports results
+#+begin_src python :noweb eval :results value file  :exports results 
   fig_path = "<<predicted_returns(i_asset=0, name="predicted_returns_")>>"
   fig_path
 #+end_src
@@ -450,8 +464,9 @@ Notes:
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: predicted_returns0
 #+end_comment
+
 #+NAME: Function to plot returns from factor model
-#+begin_src python :results none
+#+begin_src python :results none 
   def plot_rets_fromfactors(df_assets,
                             df_factors,
                             df_returns_pred,
@@ -479,39 +494,39 @@ Notes:
 
 #+end_src
 
-#+NAME: predicted_returns0
-#+begin_src python :noweb eval :results value file  :exports results
+#+NAME: predicted_factorreturns_test
+#+begin_src python :noweb eval :results value file  :exports results :var name=(org-element-property :name (org-element-context)) 
   fig1_path = plot_rets_fromfactors(df_assets_test,
                                    df_factors_test,
                                    df_returns_pred,
-                                   i_asset=1, name="predicted_testingreturns_")
+                                   i_asset=0, name=name)
   fig1_path #
 #+end_src
 #+CAPTION:  Backtesting factor approaximation on Google asset
 #+ATTR_LATEX: :width 0.75\textwidth 
-#+RESULTS: predicted_returns0
-[[file:img/predicted_testingreturns_CMCSA.png]]
+#+RESULTS: predicted_factorreturns_test
+[[file:img/predicted_factorreturns_testJPM.png]]
 
-#+NAME: predicted_returns0traing
-#+begin_src python :noweb eval :results value file  :exports results
+#+NAME: predicted_factorreturns_train
+#+begin_src python :noweb eval :results value file  :exports results :var name=(org-element-property :name (org-element-context))
   fig1_path = plot_rets_fromfactors(df_assets_train,
-                                   df_factors_train,
-                                   df_returns_predt,
-                                   i_asset=1, name="predicted_trainingreturns_")
+                                    df_factors_train,
+                                    df_returns_predt,
+                                    i_asset=0, name=name)
   fig1_path #
 #+end_src
 #+CAPTION:  Backtesting factor approaximation on Google asset
 #+ATTR_LATEX: :width 0.75\textwidth 
-#+RESULTS: predicted_returns0traing
-[[file:img/predicted_trainingreturns_CMCSA.png]]
+#+RESULTS: predicted_factorreturns_train
+[[file:img/predicted_factorreturns_trainJPM.png]]
 
 ** Generation of asset views
 :PROPERTIES:
-:header-args: :session py1 :tangle yes :comments org
+:header-args: :session py1 :tangle yes 
 :END:
 *** ARIMA model construction
 #+NAME: arima_autocorrelation
-#+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
+#+begin_src python :results value file  :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
   fig = plt.figure()
   ax = autocorrelation_plot(df_train_factors['Mkt-RF'])
@@ -521,22 +536,56 @@ Notes:
   fig.savefig(fig1_path)
   fig1_path
 #+end_src
-
 #+RESULTS: arima_autocorrelation
 [[file:img/arima_autocorrelation.png]]
 
+#+begin_src python :results none 
+  errs_train, errs_test = model_stats.arima_hyperparameters(df_factors_train,
+                                                            df_factors_test,
+                                                            factor_names,
+                                                            [0, 5, 10],
+                                                            [0, 5, 10],
+                                                            [0, 5, 10 ],
+                                                            model_stats.err_mse,
+                                                            dict(enforce_stationarity=False,
+                                                                 enforce_invertibility=False)
+                                                            )
+#+end_src
+
 #+begin_src python :results none
+  #if config.compute_arima_parameters:
+  def pick_arimahyper(errs):
+      arima_parameters = dict()
+      derrors = collections.defaultdict(list)
+      derrorsind = collections.defaultdict(list)
+      minvalue = collections.defaultdict(list)
+      index = collections.defaultdict(list)  
+      for k, v in errs.items():
+          conv = k.split('_')
+          derrors[conv[0]].append(v)
+          derrorsind[conv[0]].append(tuple(int(i) for i in conv[1:]))
+      for k, v in derrors.items():
+          index[k] = v.index(min(v))
+          minvalue[k] = min(v)
+          arima_parameters[k] = derrorsind[k][index[k]]
+      return arima_parameters, derrors, derrorsind, minvalue
+  arima_parameters, derrors, derrorsind, minvalue = pick_arimahyper(errs_test)
+#+end_src
+
+
+#+begin_src python :results none 
   Xtrain = df_factors_train[factor_names].to_numpy()
   Xtest = df_factors_test[factor_names].to_numpy()
   index_train = df_factors_train.index
   index_test = df_factors_test.index
-  arima_parameters = {'Mkt-RF': (14,2,10),
-                      'SMB': (2,1,0),
-                      'HML': (2,1,0),
-                      'RMW': (2,1,0),
-                      'CMA': (3,2,0),
-                      'MOM': (2,1,0)
+  arima_parameters = {'Mkt-RF': (15,0,15),
+                      'SMB': (15,0,9),
+                      'HML': (6,0,3),
+                      'RMW': (15,0,6),
+                      'CMA': (6,4,12),
+                      'MOM': (9,0,6)
                       }
+  #arima_parameters = config.arima_parameters
   model_sett = dict(enforce_stationarity=False,
                     enforce_invertibility=False) 
   arima_train_models = model_stats.arima_fit(Xtrain,
@@ -551,7 +600,7 @@ Notes:
                                                              index_test)  
 #+end_src
 
-#+begin_src python :results output
+#+begin_src python :results output  
   print(arima_train_models['Mkt-RF'].summary())
 #+end_src
 
@@ -559,46 +608,28 @@ Notes:
 #+begin_example
                                SARIMAX Results                                
 ==============================================================================
-Dep. Variable:                      y   No. Observations:                  113
-Model:               ARIMA(14, 2, 10)   Log Likelihood                 185.942
-Date:                Tue, 15 Aug 2023   AIC                           -321.885
-Time:                        13:43:35   BIC                           -257.517
-Sample:                             0   HQIC                          -295.858
-                                - 113                                         
+Dep. Variable:                      y   No. Observations:                  246
+Model:                 ARIMA(0, 0, 5)   Log Likelihood                 406.466
+Date:                Wed, 16 Aug 2023   AIC                           -798.932
+Time:                        12:56:36   BIC                           -774.567
+Sample:                             0   HQIC                          -789.115
+                                - 246                                         
 Covariance Type:                  opg                                         
 ==============================================================================
                  coef    std err          z      P>|z|      [0.025      0.975]
 ------------------------------------------------------------------------------
-ar.L1         -2.5725      0.630     -4.084      0.000      -3.807      -1.338
-ar.L2         -4.0994      1.437     -2.852      0.004      -6.916      -1.282
-ar.L3         -5.3448      2.115     -2.527      0.012      -9.491      -1.199
-ar.L4         -6.3109      2.596     -2.431      0.015     -11.399      -1.222
-ar.L5         -7.0200      2.870     -2.446      0.014     -12.646      -1.394
-ar.L6         -7.2300      3.045     -2.374      0.018     -13.199      -1.261
-ar.L7         -6.6472      3.097     -2.146      0.032     -12.718      -0.576
-ar.L8         -5.5848      2.936     -1.902      0.057     -11.339       0.169
-ar.L9         -4.4234      2.612     -1.693      0.090      -9.543       0.696
-ar.L10        -3.1031      2.194     -1.414      0.157      -7.404       1.197
-ar.L11        -1.8092      1.745     -1.037      0.300      -5.230       1.612
-ar.L12        -0.9664      1.296     -0.746      0.456      -3.506       1.573
-ar.L13        -0.5024      0.788     -0.638      0.524      -2.047       1.042
-ar.L14        -0.2345      0.305     -0.768      0.443      -0.833       0.364
-ma.L1          0.5390      0.574      0.938      0.348      -0.587       1.665
-ma.L2          0.0026      0.498      0.005      0.996      -0.973       0.978
-ma.L3         -0.4013      0.366     -1.096      0.273      -1.119       0.316
-ma.L4         -0.5210      0.461     -1.130      0.259      -1.425       0.383
-ma.L5          0.0350      0.539      0.065      0.948      -1.020       1.090
-ma.L6         -0.1929      0.402     -0.480      0.631      -0.980       0.595
-ma.L7         -0.6095      0.345     -1.769      0.077      -1.285       0.066
-ma.L8         -0.0968      0.346     -0.279      0.780      -0.776       0.582
-ma.L9          0.1733      0.338      0.513      0.608      -0.489       0.836
-ma.L10         0.1687      0.253      0.667      0.505      -0.327       0.664
-sigma2         0.0011      0.000      2.897      0.004       0.000       0.002
+const          0.0052      0.004      1.220      0.223      -0.003       0.014
+ma.L1          0.1244      0.054      2.296      0.022       0.018       0.231
+ma.L2         -0.0490      0.062     -0.791      0.429      -0.170       0.072
+ma.L3          0.0690      0.062      1.113      0.266      -0.053       0.190
+ma.L4          0.0429      0.059      0.726      0.468      -0.073       0.159
+ma.L5          0.0382      0.058      0.656      0.512      -0.076       0.152
+sigma2         0.0020      0.000     12.825      0.000       0.002       0.002
 ===================================================================================
-Ljung-Box (L1) (Q):                   0.00   Jarque-Bera (JB):                 1.82
-Prob(Q):                              0.99   Prob(JB):                         0.40
-Heteroskedasticity (H):               2.55   Skew:                            -0.29
-Prob(H) (two-sided):                  0.01   Kurtosis:                         3.34
+Ljung-Box (L1) (Q):                   0.00   Jarque-Bera (JB):                14.85
+Prob(Q):                              0.96   Prob(JB):                         0.00
+Heteroskedasticity (H):               1.07   Skew:                            -0.35
+Prob(H) (two-sided):                  0.76   Kurtosis:                         4.00
 ===================================================================================
 
 Warnings:
@@ -608,9 +639,9 @@ Warnings:
 *** ARIMA model prediction
 
 #+NAME: ARIMA_Mkt-RF_train
-#+begin_src python :results value file :exports results :var name=(org-element-property :name (org-element-context))
+#+begin_src python :results value file :exports results :var name=(org-element-property :name (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
-  fig1 = px.line(df_arimatrain, y=['Mkt-RF','Mkt-RF_pred'])
+  fig1 = px.line(df_arimatrain, y=['CMA','CMA_pred'])
   fig1.write_image(fig1_path)
   fig1_path #
 
@@ -621,9 +652,9 @@ Warnings:
 [[file:img/ARIMA_Mkt-RF_train.png]]
 
 #+NAME: ARIMA_Mkt-RF_test
-#+begin_src python :results value file :exports results :var name=(org-element-property :name (org-element-context))
+#+begin_src python :results value file :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
-  fig1 = px.line(df_arimatest, y=['Mkt-RF','Mkt-RF_pred'])
+  fig1 = px.line(df_arimatest, y=['CMA','CMA_pred'])
   fig1.write_image(fig1_path)
   fig1_path #
 
@@ -635,37 +666,71 @@ Warnings:
 
 *** ARIMA backtesting
 
-#+begin_src python :results none
-  # prediction on test data
+#+begin_src python :results none 
+  # prediction on train data
   fnames_prediction = [k for k in df_arimatrain.columns if "_pred" in k]
   asset_names_pred = [k + '_pred' for k in asset_names]
   returns_arimapred_train = factor_model(df_arimatrain[fnames_prediction].to_numpy())
   df_arimapred_train = pd.DataFrame(returns_arimapred_train,
                                     columns=asset_names_pred,
-                                    index=df_assets_train.index)
-  df_arimaasset_train = df_arimapred_train.join(df_assets_train).dropna()
-  # prediction on training data
+                                    index=df_assets_train.index[:-1])
+  df_arimaasset_train = df_arimapred_train.join(df_assets_train)
+  # prediction on test data
   returns_arimapred_test = factor_model(df_arimatest[fnames_prediction].to_numpy())
   df_arimapred_test = pd.DataFrame(returns_arimapred_test,
-                                    columns=asset_names_pred,
-                                    index=df_assets_test.index)
-  df_arimaasset_test = df_arimapred_test.join(df_assets_test).dropna()
-  # prediction on training data
+                                   columns=asset_names_pred,
+                                   index=df_assets_test.index[:-1])
+  df_arimaasset_test = df_arimapred_test.join(df_assets_test)
+  # # prediction on training data
   df_arimatest_profits = ml4qf.utils.profit_portfolio(
-      df_arimaasset_test,
-      {k: 1. for k in df_arimaasset_test.columns})
+     df_arimaasset_test,
+     {k: 1. for k in df_arimaasset_test.columns})
 #+end_src
+
+
+#+NAME: ARIMA_returnsbacktest
+#+begin_src python :results value file :exports results :var name=(org-element-property :name  (org-element-context)) 
+  fig1_path= img_dir / f'{name}.png'
+  fig1 = px.line(df_arimaasset_test, y=['JPM_pred', 'JPM','EQT','EQT_pred'])
+  fig1.write_image(fig1_path)
+  fig1_path #
+
+#+end_src
+#+CAPTION: daa
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: ARIMA_returnsbacktest
+[[file:img/ARIMA_returnsbacktest.png]]
+
+
+#+NAME: ARIMA_backtest
+#+begin_src python :results value file :exports results :var name=(org-element-property :name  (org-element-context)) 
+  fig1_path= img_dir / f'{name}.png'
+  fig1 = px.line(df_arimatest_profits, y=['ATO', 'ATO_pred', 'KR','KR_pred'])
+  fig1.write_image(fig1_path)
+  fig1_path #
+
+#+end_src
+#+CAPTION: daa
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: ARIMA_backtest
+[[file:img/ARIMA_backtest.png]]
 
 
 ** Black-Litterman based portfolio
 :PROPERTIES:
-:header-args: :session py1 :tangle yes :comments org
+:header-args: :session py1 :tangle no
 :END:
 
+*** Views
+EQT will rise 15%
+PH to outperform JPM by 11%
+KR to outperform ATO by 8%
+
+*** Covariance treatment
 *** Prior and posterior returns construction
 
 #+NAME: Calculate Covariance of excess returns
-#+begin_src python :results none
+#+begin_src python :results none 
   df_Sigma_factors = df_factors[factor_names].cov()
   df_Sigma_factors_train = df_factors_train[factor_names].cov()
   df_Sigma_factors_test = df_factors_test[factor_names].cov()
@@ -696,53 +761,61 @@ Warnings:
 #+end_src
 
 #+NAME: Compute equilibrium returns 
-#+begin_src python :results none
+#+begin_src python :results none 
   f_mu = lambda l, S, w: l * S @ w
-  mu_mkt_assets = f_mu(config.lambda_mkt, Sigma_assets, w_mkt)
-  mu_mkt_4mfactors = f_mu(config.lambda_mkt, Sigma_4mfactors, w_mkt)
-  optimization.mean_variance_opt(mu_mkt_assets)
+  mu_mkt_assets = f_mu(config.lambda_mkt, Sigma_assets_train, w_mkt)
+  mu_mkt_4mfactors = f_mu(config.lambda_mkt, Sigma_4mfactors_train, w_mkt)
+  w1_assets_theoretical = optimization.mean_variance_opt(mu_mkt_assets, Sigmainv_assets_train, config.lambda_portfolio[0])
+  w2_assets_theoretical = optimization.mean_variance_opt(mu_mkt_assets, Sigmainv_assets_train, config.lambda_portfolio[1])
+  w3_assets_theoretical = optimization.mean_variance_opt(mu_mkt_assets, Sigmainv_assets_train, config.lambda_portfolio[2])
+  w1_4mfactors_theoretical = optimization.mean_variance_opt(mu_mkt_4mfactors, Sigmainv_4mfactors_train, config.lambda_portfolio[0])
+  w2_4mfactors_theoretical = optimization.mean_variance_opt(mu_mkt_4mfactors, Sigmainv_4mfactors_train, config.lambda_portfolio[1])
+  w3_4mfactors_theoretical = optimization.mean_variance_opt(mu_mkt_4mfactors, Sigmainv_4mfactors_train, config.lambda_portfolio[2])
 #+end_src
 
 #+NAME: Black-Litterman initialisation
-#+begin_src python :results none
-  pf_trustee = bl.BlackLitterman(Sigma, w_mkt, config.lambda_mkt[0])
-  pf_ = bl.BlackLitterman(Sigma, w_mkt, config.lambda_mkt[1])
-  pf_trustee = bl.BlackLitterman(Sigma, w_mkt, config.lambda_mkt[2])
+#+begin_src python :results none 
+  bl_model_Sassets = bl.BlackLitterman(Sigma_assets_train, w_mkt, config.lambda_mkt)
+  bl_model_Sassets.set_portfolio_inputs(config.tau, config.P, config.Q)
+  bl_model_Sfactors = bl.BlackLitterman(Sigma_4mfactors_train, w_mkt, config.lambda_mkt)
+  bl_model_Sfactors.set_portfolio_inputs(config.tau, config.P, config.Q)
+
+  bl_model_Sfactors.mu_mkt
+  bl_model_Sassets.mu_mkt
 #+end_src
 
-*** Covariance treatment
 *** Portfolio weights optimisation
 
 #+NAME: Calculate Covariance of factors
-#+begin_src python :results none
+#+begin_src python :results none 
 
   lmb_p = config.lambda_portfolio[2]
-  w_opt0 = optimization.mean_variance_opt(mu_mkt_assets,            
-                                          Sigmainv_assets,          
-                                          lmb_p)
-
   x0 = 1. / num_assets * np.ones(num_assets)
-  args = (mu_mkt_assets,            
-          Sigma_assets,          
+  args = (bl_model_Sassets.mu_bl,            
+          bl_model_Sassets.Sigma,          
           lmb_p)
-  res0 = optimization.scipy_minimize("mean_variance",
-                                     x0,
-                                     method_name='SLSQP',
-                                     args=args,
-                                     options=dict(maxiter=200,
-                                                  ftol=1e-12))
-
+  res = optimization.scipy_minimize("mean_variance",
+                                    x0,
+                                    method_name='SLSQP',
+                                    args=args,
+                                    options=dict(maxiter=200,
+                                                 ftol=1e-12))
+  w1_assets_opt = res.x
 #+end_src
 
 #+NAME: Compute porfolio weights frontier
-#+begin_src python :results none
+#+begin_src python :results none 
 
   lmb_p = config.lambda_portfolio[2]
 
   x0 = 1. / num_assets * np.ones(num_assets)
   args = (mu_mkt_assets*12,
           Sigma_assets,
-          0.15)
+          0.1)
+  args = (bl_model_Sassets.mu_mkt*12,            
+          bl_model_Sassets.Sigma,          
+          0.06)
+
   cons_sett = dict(eq_rets=dict(type="eq"),
                    eq_weights1=dict(type="eq"),
                    ieq_weights0=dict(type="ineq")
@@ -762,7 +835,7 @@ Warnings:
 #+end_src
 
 #+NAME: Function to build portfolios weights
-#+begin_src python :results none
+#+begin_src python :results none 
 
   def build_portfolio_weights(mu_targetlist,
                               x0,
@@ -789,7 +862,7 @@ Warnings:
 #+end_src
 
 #+NAME: Function to compute weights vs volatility for target returns
-#+begin_src python :results none
+#+begin_src python :results none 
 
   def build_df_weightsvol(assets,
                           mu_targetlist,
@@ -829,7 +902,7 @@ Warnings:
 #+end_src
 
 #+NAME: df with portfolios weights
-#+begin_src python :results none
+#+begin_src python :results none 
 
   lmb_p = config.lambda_portfolio[2]
   x0 = 1. / num_assets * np.ones(num_assets)
@@ -841,7 +914,7 @@ Warnings:
 #+end_src
 
 #+NAME: Weights_Composition
-#+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
+#+begin_src python :results value file  :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
   fig1 = px.area(df_weights_vols, x="vols", y="weights", color="assets",
                 #pattern_shape_sequence=[".", "x", "+"],              
@@ -855,7 +928,7 @@ Warnings:
 [[file:img/Weights_Composition.png]]
 
 
-#+begin_src python :results none
+#+begin_src python :results none 
   weights_sol = {k: res1.x[i] for i, k in enumerate(asset_names)}
   df_profits_sol = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol)
   weights_naive = {k: x0[i] for i, k in enumerate(asset_names)}  
@@ -867,7 +940,7 @@ Warnings:
 #+end_src
 
 #+NAME: P&L_plot
-#+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
+#+begin_src python :results value file  :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
   fig1 = px.line(df_profits, y=['Opt', 'Naive'], markers=True)
   fig1.write_image(fig1_path)
