@@ -49,6 +49,7 @@
   import plotly.express as px
   import plotly.graph_objects as go
   import matplotlib.pyplot as plt
+  import collections
   from pandas.plotting import autocorrelation_plot
   import config
   importlib.reload(config)
@@ -525,11 +526,12 @@ Notes:
 :header-args: :session py1 :tangle yes 
 :END:
 *** ARIMA model construction
+#+BEGIN_COMMENT
 #+NAME: arima_autocorrelation
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
   fig = plt.figure()
-  ax = autocorrelation_plot(df_train_factors['Mkt-RF'])
+  ax = autocorrelation_plot(df_train_factors['SMB'])
   #ax.set_title("bleh")
   #ax.set_xlabel("xlabel")
   #ax.plot(x, y, 'r--')
@@ -538,22 +540,9 @@ Notes:
 #+end_src
 #+RESULTS: arima_autocorrelation
 [[file:img/arima_autocorrelation.png]]
-
-#+begin_src python :results none 
-  errs_train, errs_test = model_stats.arima_hyperparameters(df_factors_train,
-                                                            df_factors_test,
-                                                            factor_names,
-                                                            [0, 5, 10],
-                                                            [0, 5, 10],
-                                                            [0, 5, 10 ],
-                                                            model_stats.err_mse,
-                                                            dict(enforce_stationarity=False,
-                                                                 enforce_invertibility=False)
-                                                            )
-#+end_src
+#+END_COMMENT
 
 #+begin_src python :results none
-  #if config.compute_arima_parameters:
   def pick_arimahyper(errs):
       arima_parameters = dict()
       derrors = collections.defaultdict(list)
@@ -569,10 +558,29 @@ Notes:
           minvalue[k] = min(v)
           arima_parameters[k] = derrorsind[k][index[k]]
       return arima_parameters, derrors, derrorsind, minvalue
-  arima_parameters, derrors, derrorsind, minvalue = pick_arimahyper(errs_test)
 #+end_src
 
 
+#+begin_src python :results none
+  if config.compute_arima_parameters:
+      errs_train, errs_test = model_stats.arima_hyperparameters(
+          df_factors_train, # 
+          df_factors_test,
+          factor_names,
+          [0, 2, 5, 9, 13, 17, 23, 29, 35],
+          [0, 1, 2, 4, 7, 9],
+          [0, 2, 5, 9, 13, 17, 23, 29],
+          model_stats.err_mse,
+          dict(enforce_stationarity=False,
+               enforce_invertibility=False)
+      )
+      arima_parameters, derrors, derrorsind, minvalue = pick_arimahyper(errs_test)
+  else:
+      arima_parameters = config.arima_parameters
+#+end_src
+
+
+*** COMMENT ARIMA test
 #+begin_src python :results none 
   Xtrain = df_factors_train[factor_names].to_numpy()
   Xtest = df_factors_test[factor_names].to_numpy()
@@ -583,7 +591,7 @@ Notes:
                       'HML': (6,0,3),
                       'RMW': (15,0,6),
                       'CMA': (6,4,12),
-                      'MOM': (9,0,6)
+                      'MOM': (0,1,0)
                       }
   #arima_parameters = config.arima_parameters
   model_sett = dict(enforce_stationarity=False,
@@ -636,35 +644,7 @@ Warnings:
 [1] Covariance matrix calculated using the outer product of gradients (complex-step).
 #+end_example
 
-*** ARIMA model prediction
-
-#+NAME: ARIMA_Mkt-RF_train
-#+begin_src python :results value file :exports results :var name=(org-element-property :name (org-element-context)) 
-  fig1_path= img_dir / f'{name}.png'
-  fig1 = px.line(df_arimatrain, y=['CMA','CMA_pred'])
-  fig1.write_image(fig1_path)
-  fig1_path #
-
-#+end_src
-#+CAPTION: d
-#+ATTR_LATEX: :width 0.75\textwidth 
-#+RESULTS: ARIMA_Mkt-RF_train
-[[file:img/ARIMA_Mkt-RF_train.png]]
-
-#+NAME: ARIMA_Mkt-RF_test
-#+begin_src python :results value file :exports results :var name=(org-element-property :name  (org-element-context)) 
-  fig1_path= img_dir / f'{name}.png'
-  fig1 = px.line(df_arimatest, y=['CMA','CMA_pred'])
-  fig1.write_image(fig1_path)
-  fig1_path #
-
-#+end_src
-#+CAPTION: d
-#+ATTR_LATEX: :width 0.75\textwidth 
-#+RESULTS: ARIMA_Mkt-RF_test
-[[file:img/ARIMA_Mkt-RF_test.png]]
-
-*** ARIMA backtesting
+*** COMMENT ARIMA backtesting
 
 #+begin_src python :results none 
   # prediction on train data
@@ -715,8 +695,35 @@ Warnings:
 #+RESULTS: ARIMA_backtest
 [[file:img/ARIMA_backtest.png]]
 
+*** COMMENT ARIMA model prediction
 
-** Black-Litterman based portfolio
+#+NAME: ARIMA_Mkt-RF_train
+#+begin_src python :results value file :exports results :var name=(org-element-property :name (org-element-context)) 
+  fig1_path= img_dir / f'{name}.png'
+  fig1 = px.line(df_arimatrain, y=['MOM','MOM_pred'])
+  fig1.write_image(fig1_path)
+  fig1_path #
+
+#+end_src
+#+CAPTION: d
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: ARIMA_Mkt-RF_train
+[[file:img/ARIMA_Mkt-RF_train.png]]
+
+#+NAME: ARIMA_Mkt-RF_test
+#+begin_src python :results value file :exports results :var name=(org-element-property :name  (org-element-context)) 
+  fig1_path= img_dir / f'{name}.png'
+  fig1 = px.line(df_arimatest, y=['MOM','MOM_pred'])
+  fig1.write_image(fig1_path)
+  fig1_path #
+
+#+end_src
+#+CAPTION: d
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: ARIMA_Mkt-RF_test
+[[file:img/ARIMA_Mkt-RF_test.png]]
+
+** COMMENT Black-Litterman based portfolio
 :PROPERTIES:
 :header-args: :session py1 :tangle no
 :END:

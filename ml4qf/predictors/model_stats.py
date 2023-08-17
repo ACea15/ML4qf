@@ -55,19 +55,22 @@ def arima_build_pred(arima_model, Xtrain, Xtest,
     len_train = len(Xtrain)
     len_test = len(Xtest)    
     for i, k in enumerate(model_names):
-        train_dict[k] = Xtrain[:, i]
-        train_dict[k+"_pred"] = arima_model[k].predict(0, len_train - 1)
-        test_dict[k] = Xtest[:, i]
+        train_dict[k] = Xtrain[:-1, i]
+        train_dict[k+"_pred"] = arima_model[k].predict(0, len_train - 1)[1:]
+        test_dict[k] = Xtest[:-1, i]
         test_dict[k+"_pred"] = arima_model[k].predict(len_train,
-                                                      len_train + len_test -  1)
-    df_train = pd.DataFrame(train_dict, index=index_train)
-    df_test = pd.DataFrame(test_dict, index=index_test)
+                                                      len_train + len_test -  1)[1:]
+    df_train = pd.DataFrame(train_dict, index=index_train[:-1])
+    df_test = pd.DataFrame(test_dict, index=index_test[:-1])
     return df_train, df_test
 
 def err_rmse(y, yhat):
     rmse = np.sqrt(mean_squared_error(y, yhat))
     return rmse
 
+def err_mse(y, yhat):
+    mse = mean_squared_error(y, yhat)
+    return mse
 
 # model_fit = model.fit()
 # # summary of fit model
@@ -89,6 +92,8 @@ def arima_hyperparameters(df_train,
                           err_fun,
                           model_sett=None,
                           ):
+    if model_sett is None:
+        model_sett = dict()
 
     Xtrain = df_train[var_names].to_numpy()
     Xtest = df_test[var_names].to_numpy()
@@ -96,9 +101,9 @@ def arima_hyperparameters(df_train,
     index_test = df_test.index
     errs_train = {}
     errs_test = {}
-    for p, d, q in itertools.product([p_vect,
+    for p, d, q in itertools.product(p_vect,
                                       d_vect,
-                                      q_vect]):
+                                      q_vect):
         arima_parameters = {k: (p, d, q) for k in var_names}
         arima_train_models = arima_fit(Xtrain,
                                        var_names,
@@ -113,8 +118,14 @@ def arima_hyperparameters(df_train,
             index_test)
         for k in var_names:
             rvar = f"{k}_{p}_{d}_{q}"
-            errs_train[rvar]  = err_fun(df_arimatrain[k],
-                                        df_arimatrain[k + "_pred"])
-            errs_test[rvar]  = err_fun(df_arimatest[k],
-                                        df_arimatest[k + "_pred"])
+            try:
+                errs_train[rvar] = err_fun(df_arimatrain[k],
+                                            df_arimatrain[k + "_pred"])
+            except ValueError:
+                errs_train[rvar] = float('nan')
+            try:    
+                errs_test[rvar]  = err_fun(df_arimatest[k],
+                                           df_arimatest[k + "_pred"])
+            except ValueError:
+                errs_test[rvar] = float('nan')
     return errs_train, errs_test       
