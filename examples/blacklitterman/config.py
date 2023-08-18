@@ -62,10 +62,10 @@ ASSET_SELECTION_NAMES = ['JPM',     #   AMZN
 # RHI 
 #ASSET_SELECTION_NAMES = None
 
-start_date_factors = "2010-03-31"
+start_date_factors = "2000-03-31"
 end_date_factors =  "2022-12-31"
 ###
-start_date_assets = "2010-02-01"
+start_date_assets = "2000-02-01"
 end_date_assets = "2022-12-01"
 
 start = datetime.datetime.strptime(start_date_assets, "%Y-%m-%d")
@@ -77,7 +77,7 @@ split_data_idx = int(train_test_ratio * days * 12 / 365)
 lambda_mkt = 2.24
 lambda_portfolio = [0.1, 2.24, 6]
 
-compute_arima_parameters = True
+compute_arima_parameters = False
 
 arima_parameters = {'Mkt-RF': (15,0,15),
                     'SMB': (15,0,9),
@@ -87,6 +87,16 @@ arima_parameters = {'Mkt-RF': (15,0,15),
                     'MOM': (9,0,6)
                     }
 
+arima_parameters = {'Mkt-RF': (7,1,26),
+                    'SMB': (21,1,9),
+                    'HML': (13,2,1),
+                    'RMW': (15,0,6),
+                    'CMA': (15,4,6),
+                    'MOM': (21,2,23)
+                    }
+
+# {'Mkt-RF': (7, 1, 26), 'SMB': (21, 1, 9), 'HML': (13, 2, 1), 'RMW': (15, 0, 6), 'CMA': (15, 4, 6), 'MOM': (21, 2, 23)}
+#{'Mkt-RF': (8, 0, 4), 'SMB': (15, 1, 5), 'HML': (0, 2, 15), 'RMW': (15, 0, 6), 'CMA': (15, 4, 6), 'MOM': (15, 2, 23)} # new
 # {'Mkt-RF': (0, 1, 9), 'SMB': (0, 0, 13), 'HML': (5, 0, 2), 'RMW': (35, 0, 23), 'CMA': (0, 0, 0), 'MOM': (13, 0, 5)}
 
 P = np.zeros((3,10))

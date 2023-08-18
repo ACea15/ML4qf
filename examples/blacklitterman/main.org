@@ -61,10 +61,6 @@
 #+end_src
 
 * Introduction
-** Implemented computational tools and external libraries
-- getFamaFrenchFactors
-  gets data for fame french factors from the Kenneth French library
-  https://pypi.org/project/getFamaFrenchFactors/
 ** Specifications:
 For risk-free rate, 3M US Treasury from pandas FRED dataset/ECB website
 rates for EUR/some small constant rate/zero rate – all are acceptable.
@@ -79,17 +75,17 @@ The S&P 500 is considered a better reflection of the market’s performance acro
 [[./img/polimi-M0.png]]
 #+end_comment
 
+** Implemented computational tools and external libraries
+The task 
+Outside the general purpose Python ecosystem (numpy, pandas, pytest, etc.), the following libraries have been employed  to complete this work:
+- *getFamaFrenchFactors*: Collects data for fame french factors from the Kenneth French library
+  https://pypi.org/project/getFamaFrenchFactors/
+- *statsmodels*: statistical software used to deploy an ARIMA process on the asset returns and also to fit the factors to data using an Ordinary Least Squares (OLS) approach. 
+  https://www.statsmodels.org/stable/index.html
+- *yahoofinance*: used 
+  https://python-yahoofinance.readthedocs.io/en/latest/
 * Theory
 ** Black-Litterman model
-$$
-VAR(X) = \frac{1}{n-1} \Sigma (xi - E(X))^2 
-$$
-$$
-COV(X, Y) = \frac{1}{n-1} \Sigma (xi - E(X)) (yi - E(Y)) 
-$$
-$$
-COR(X, Y) = \frac{COV(X, Y)}{(VAR(X)VAR(Y))^{0.5}}
-$$
 
 
 $$
@@ -121,10 +117,12 @@ Normal distributions:
 
 It is one of the multi-factor models which is widely used in both academia and industry to estimate the excess return of an investment asset. It is an extension to Capital Asset Pricing Model (CAPM) by adding two additional factors apart from the market risk when estimating the excess returns of an asset. The three factors considered in this model are:
 
-    Market factor (MKT) — Excess market return
-    Size factor (SMB) — Excess return with a small market cap over those with a large market cap
-    Value factor (HML) — Excess return of value stocks over growth stocks.
-
+    - Market factor (MKT): Excess market return
+    - Size factor (SMB): Excess return with a small market cap over those with a large market cap
+    - Value factor (HML): Excess return of value stocks over growth stocks.
+    - Profitability factor (RMW): Excess returns of stocks with strong and weak profitability
+    - Investment factor (CMA): Excess returns between high and low investment firms.
+      
 The Fama-French model is widely known as a stock market benchmark to evaluate investment performance.
 
 $$
@@ -164,11 +162,14 @@ The parameters of the ARIMA model are defined as follows:
 - Hierarchical Risk Parity (HRP)   
 
 * Results
+The analysis is divided in three major sections: a portfolio selection of 10 assets from the S&P500 and the factor analysis of those assets; a statistical analysis using an ARIMA process in order to project the assets onto the future and generate the views input to the portfolio optimisation; and finally the Black-Litterman portfolio optimization with backtesting.  
 ** Portfolio and Factor analysis
 :PROPERTIES:
-:header-args: :session py1 :tangle yes
+:header-args: :session py1 :tangle yes :exports none
 :END:
+There are many approaches for picking a basket of assets and herein the adoption is a simple yet general and automatic strategy that guarantees diversification. The companies gathered are first presented together with their performance and correlations, then the factor analysis on these companies is shown.  
 *** Asset selection
+The selection of assets have followed a random and automatic generation of ten tickers from the S&P 500 with these constraints: no two assets could belong to the same sector; 1 company is chosen among the top 5% in terms of market cap, 2 among the next 20%, 4 among the next 50%, 2 in the following 20% and the final one picked among the 5% smallest; the correlation among assets should also be kept small. 
 #+NAME: Load index SP500
 #+begin_src python :results none
   # Load index SP500
@@ -218,7 +219,7 @@ The parameters of the ARIMA model are defined as follows:
   asset_names = list(df_assets.columns)
 
 #+end_src
-
+The resulting basket is shown in Table  [[df_portfolio_summary]].
 #+NAME: Compute and show Data Frame, df_portfolio_summary
 #+begin_src python :results raw :exports results :tangle no
   # Compute Data Frame df_portfolio_summary
@@ -233,45 +234,50 @@ The parameters of the ARIMA model are defined as follows:
            showindex=True,
            tablefmt='orgtbl')
 #+end_src
+#+NAME: df_portfolio_summary
 #+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption  
 #+RESULTS: Compute and show Data Frame, df_portfolio_summary
 |      |   marketCap | marketWeights | sector                 |
 |------+-------------+---------------+------------------------|
-| JPM  | 4.46929e+11 |      0.544416 | Financial Services     |
-| CVS  | 9.56394e+10 |      0.116501 | Healthcare             |
-| ATVI | 7.18864e+10 |     0.0875667 | Communication Services |
-| PH   | 5.41743e+10 |     0.0659911 | Industrials            |
-| WELL | 4.24812e+10 |     0.0517475 | Real Estate            |
-| YUM  |   3.733e+10 |     0.0454727 | Consumer Cyclical      |
-| KR   | 3.53562e+10 |     0.0430683 | Consumer Defensive     |
-| ATO  | 1.69743e+10 |     0.0206769 | Utilities              |
-| EQT  | 1.59304e+10 |     0.0194052 | Energy                 |
-| DXC  | 4.23124e+09 |    0.00515418 | Technology             |
+| JPM  | 4.48847e+11 |      0.546415 | Financial Services     |
+| CVS  | 9.59856e+10 |       0.11685 | Healthcare             |
+| ATVI | 7.17056e+10 |     0.0872924 | Communication Services |
+| PH   | 5.34366e+10 |     0.0650523 | Industrials            |
+| WELL | 4.18798e+10 |     0.0509834 | Real Estate            |
+| YUM  | 3.75877e+10 |     0.0457582 | Consumer Cyclical      |
+| KR   | 3.51552e+10 |      0.042797 | Consumer Defensive     |
+| ATO  | 1.69714e+10 |     0.0206606 | Utilities              |
+| EQT  | 1.55687e+10 |      0.018953 | Energy                 |
+| DXC  | 4.30288e+09 |    0.00523821 | Technology             |
 
 *** Assets exploratory analysis
-
+Monthly returns are used for the analysis as a better metric for a portfolio that is not going to be rebalanced for long periods of time. A period of over 20 years is taken for both the analysis and the backtesting as to make sure a reasonable amount of data is utilised in the study. Table [[df_assets]] 
 #+NAME: df_assets
 #+begin_src python :session py1 :results raw :exports results :tangle no
-  tabulate(df_assets.iloc[:10],
+  df_assets2show = pd.concat([df_assets.iloc[:5],df_assets.iloc[-5:]])
+  df_assets2show.index = df_assets2show.index.date
+  tabulate(df_assets2show,
            headers=asset_names,
            showindex=True,
            tablefmt='orgtbl')
 #+end_src
+#+NAME: df_assets
 #+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption  
 #+RESULTS: df_assets
-|                     |        JPM |        CVS |       ATVI |         PH |        WELL |        YUM |          KR |        ATO |        EQT |        DXC |
-|---------------------+------------+------------+------------+------------+-------------+------------+-------------+------------+------------+------------|
-| 2000-03-01 00:00:00 |  0.0949765 |  0.0732143 | -0.0492617 |   0.139655 |   -0.100402 |   0.166667 |    0.175732 | -0.0437956 |   0.187086 | 0.00396511 |
-| 2000-04-01 00:00:00 |   -0.17276 |    0.15807 |  -0.481865 |   0.125567 |    0.138393 |  0.0905433 |   0.0569395 | -0.0305344 |  0.0348675 |  0.0308057 |
-| 2000-05-01 00:00:00 |  0.0355287 |          0 | -0.0099994 |  -0.103495 |  0.00784314 |  -0.134686 |   0.0707071 |   0.153543 |  0.0727763 |   0.174713 |
-| 2000-06-01 00:00:00 | -0.0748954 | -0.0804598 |  0.0505057 |  -0.178411 |   0.0126459 | -0.0362472 |    0.110063 | -0.0435154 | -0.0298367 |  -0.220483 |
-| 2000-07-01 00:00:00 |  0.0814111 |    -0.0125 |   0.346154 |  0.0383212 |    0.106628 |  -0.141593 |  -0.0623229 |    0.17752 |  0.0786662 |  -0.171548 |
-| 2000-08-01 00:00:00 |   0.121706 |  -0.059731 |        0.6 | -0.0210896 |  0.00347222 |   0.201675 |   0.0974321 | 0.00606061 |  0.0816327 |   0.277778 |
-| 2000-09-01 00:00:00 |  -0.173378 |    0.24695 |  0.0714283 | -0.0305206 |   -0.017301 |  0.0509384 | -0.00619416 | -0.0060241 |   0.125694 | -0.0608695 |
-| 2000-10-01 00:00:00 |  -0.014885 |    0.14305 | -0.0791664 |   0.225926 | -0.00352113 | -0.0204083 |           0 |   0.121212 | -0.0850382 |  -0.151515 |
-| 2000-11-01 00:00:00 |   -0.18956 |  0.0743802 |  -0.248869 | -0.0649546 |  -0.0459364 |        0.2 |    0.174515 |  0.0864865 |  -0.038793 |  0.0823413 |
-| 2000-12-01 00:00:00 |   0.232203 |  0.0538462 |   0.457832 |   0.140549 |   -0.037037 | -0.0833332 |   0.0212264 | -0.0298507 |   0.197309 |   -0.11824 |
-
+|            |        JPM |         CVS |       ATVI |         PH |       WELL |        YUM |         KR |        ATO |        EQT |        DXC |
+|------------+------------+-------------+------------+------------+------------+------------+------------+------------+------------+------------|
+| 2000-03-01 |  0.0949765 |   0.0732143 | -0.0492617 |   0.139655 |  -0.100402 |   0.166667 |   0.175732 | -0.0437956 |   0.187086 | 0.00396511 |
+| 2000-04-01 |   -0.17276 |     0.15807 |  -0.481865 |   0.125567 |   0.138393 |  0.0905433 |  0.0569395 | -0.0305344 |  0.0348675 |  0.0308057 |
+| 2000-05-01 |  0.0355287 |           0 | -0.0099994 |  -0.103495 | 0.00784314 |  -0.134686 |  0.0707071 |   0.153543 |  0.0727763 |   0.174713 |
+| 2000-06-01 | -0.0748954 |  -0.0804598 |  0.0505057 |  -0.178411 |  0.0126459 | -0.0362472 |   0.110063 | -0.0435154 | -0.0298367 |  -0.220483 |
+| 2000-07-01 |  0.0814111 |     -0.0125 |   0.346154 |  0.0383212 |   0.106628 |  -0.141593 | -0.0623229 |    0.17752 |  0.0786662 |  -0.171548 |
+| 2022-07-01 |  0.0244206 |   0.0325922 |   0.026843 |   0.174924 |  0.0484517 |  0.0795525 | -0.0188042 |  0.0828724 |   0.279942 |  0.0425602 |
+| 2022-08-01 | -0.0141297 |   0.0258152 | -0.0182614 | -0.0833304 |  -0.112231 | -0.0922148 |  0.0322997 | -0.0659857 |  0.0856235 |  -0.215823 |
+| 2022-09-01 | -0.0811572 |   -0.028324 |  -0.052873 | -0.0856227 |  -0.160861 | -0.0440489 | -0.0874009 |  -0.101693 |   -0.14749 | -0.0121066 |
+| 2022-10-01 |   0.204593 | -0.00702533 | -0.0207155 |   0.199373 |  -0.050995 |   0.111999 |  0.0809143 |  0.0461463 |  0.0267485 |   0.174428 |
+| 2022-11-01 |  0.0977121 |   0.0758184 |  0.0157966 |  0.0286285 |   0.163663 |  0.0880339 |  0.0401776 |   0.128109 |  0.0136233 |      0.032 |
+#
+Fig. [[basket_returns]] shows the returns evolution of the assets over the period of analysis.
 #+NAME: basket_returns
 #+begin_src python :results value file  :exports results :var name=(org-element-property  :name (org-element-context))
   # Plot basket_returns
@@ -280,13 +286,13 @@ The parameters of the ARIMA model are defined as follows:
   fig1.write_image(fig1_path)
   fig1_path #
 #+end_src
-
+#+NAME: basket_returns
 #+CAPTION:  Asset's basket returns
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: basket_returns
 [[file:img/basket_returns.png]]
 
-
+The correlation between the returns is a good indication of how well diversified our portfolio is and it can be seen that a low correlation is reflected among most of the assets. It is important to keep in mind this is not the ultimate proof of diversification since it does not capture nonlinear relations between the pairs.
 #+NAME: AssetsCorrelation
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name (org-element-context))
   # Plot AssetsCorrelation
@@ -304,6 +310,7 @@ The parameters of the ARIMA model are defined as follows:
 [[file:img/AssetsCorrelation.png]]
 
 *** Factor collection
+The 5 Fama-French factors are retrieved for the dates of interest together with the momentum factor and the risk-free interest rate. As with the returns, monthly  They are plotted in Fig. [[Factors_evolution]] and [[RFrate_evolution]] respectively.
 #+NAME: Load Fama and French 5 factors and Momentum factor  
 #+begin_src python  :results none
   # Load Fama and French 5 factors and Momentum factor
@@ -323,6 +330,7 @@ The parameters of the ARIMA model are defined as follows:
   fig1.write_image(fig1_path)
   fig1_path # 
 #+end_src
+#+NAME: Factors_evolution 
 #+CAPTION: Factors evolution
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: Factors_evolution
@@ -335,12 +343,14 @@ The parameters of the ARIMA model are defined as follows:
   fig1.write_image(fig1_path)
   fig1_path #
 #+end_src
+#+NAME: RFrate_evolution
 #+CAPTION: (Annualised) risk-free rate evolution
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: RFrate_evolution
 [[file:img/RFrate_evolution.png]]
 
 *** Factor regression
+With the asset returns, the factors and the risk-free rate, the $\alpha$ vector and the $\beta$ matrix are calculated using an OLS regression. The results of this regression are shown in Table [[df_train_factors]].
 #+NAME: Compute regression on assets returns vs factors
 #+begin_src python :results none
   # Compute regression on assets returns vs factors
@@ -360,20 +370,22 @@ The parameters of the ARIMA model are defined as follows:
   df_train_factors = pd.DataFrame(albe, columns=df_columns, index=df_index)
   tabulate(df_train_factors, headers=df_columns, showindex=True, tablefmt='orgtbl')
 #+end_src
+#+NAME: df_train_factors
+#+CAPTION: Factor analysis alphas and betas.  
 #+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption
 #+RESULTS: Data Frame df_train_factors with alphas and betas
-|      |        alpha |   Mkt-RF |       SMB |       HML |      RMW |        CMA |        MOM |
-|------+--------------+----------+-----------+-----------+----------+------------+------------|
-| JPM  |   0.00647651 | 0.922232 |  -0.28544 |   1.18559 | -1.07209 |  -0.493312 |  -0.273228 |
-| CVS  |  -0.00148262 | 0.868157 | -0.215823 |  0.012167 |  0.25336 |    1.07393 |   0.026691 |
-| ATVI |    0.0197562 | 0.889834 |  0.242885 | -0.206069 | -0.47066 |   0.212356 |    0.39213 |
-| PH   |  -0.00382804 |  1.49288 |  0.446137 | -0.124334 |  1.14579 |   0.475606 |  -0.236351 |
-| WELL |  0.000788633 |  0.58505 |  0.356454 |  0.135987 | 0.250443 |   0.247888 | -0.0239137 |
-| YUM  |   0.00341028 | 0.876246 |  0.410095 | -0.205616 |  1.00998 |  0.0557652 |  -0.120782 |
-| KR   | -7.80218e-05 | 0.758796 | -0.304005 | -0.211342 | 0.349079 |   0.986875 |   0.149481 |
-| ATO  |   0.00152634 | 0.401037 |  0.208798 |  -0.14717 | 0.374291 |   0.563191 |  0.0033396 |
-| EQT  |  -0.00322677 |  1.09022 |  0.140145 | -0.317918 | 0.955749 |   0.672032 | -0.0193002 |
-| DXC  |  -0.00517583 |  1.47021 | -0.098542 | 0.0172014 | 0.263557 | 0.00627073 |  -0.250473 |
+|      |       alpha |   Mkt-RF |        SMB |        HML |       RMW |       CMA |        MOM |
+|------+-------------+----------+------------+------------+-----------+-----------+------------|
+| JPM  |  0.00563626 | 0.908254 |   -0.22666 |    1.22866 |  -1.07388 | -0.528425 |  -0.292278 |
+| CVS  | -0.00150586 | 0.934148 |  -0.207898 |  0.0581141 |  0.350351 |    1.0657 |  0.0150695 |
+| ATVI |   0.0221258 | 0.954258 |   0.232224 |  -0.173592 | -0.455182 |  0.139466 |   0.416191 |
+| PH   | -0.00419705 |  1.53734 |   0.415025 |  -0.222542 |   1.18971 |  0.649222 |  -0.232595 |
+| WELL |  0.00133871 | 0.520551 |   0.317423 | -0.0261333 |  0.202619 |  0.395438 | -0.0621194 |
+| YUM  |  0.00401247 | 0.886379 |   0.492413 |  -0.303535 |   1.09974 | 0.0829882 |  -0.169236 |
+| KR   | -0.00154716 | 0.913941 |  -0.353481 |  -0.217052 |  0.468732 |   1.03135 |   0.200383 |
+| ATO  |  0.00116209 | 0.437769 |   0.297623 |  -0.190557 |  0.507524 |  0.509398 | -0.0215291 |
+| EQT  |    0.002473 | 0.834018 | -0.0800847 |  0.0711937 |  0.416891 |  0.257262 |  0.0740147 |
+| DXC  |  0.00428523 |  1.18813 |  -0.441472 |   -0.25501 | -0.122975 |  0.301193 |  -0.212394 |
 
 #+NAME: Summary of factors OLS
 #+begin_src python :results output :exports results :tangle no
@@ -521,9 +533,9 @@ Notes:
 #+RESULTS: predicted_factorreturns_train
 [[file:img/predicted_factorreturns_trainJPM.png]]
 
-** Generation of asset views
+** ARIMA model for the the generation of asset views
 :PROPERTIES:
-:header-args: :session py1 :tangle yes 
+:header-args: :session py1 :tangle yes :exports none
 :END:
 *** ARIMA model construction
 #+BEGIN_COMMENT
@@ -567,9 +579,9 @@ Notes:
           df_factors_train, # 
           df_factors_test,
           factor_names,
-          [0, 2, 5, 9, 13, 17, 23, 29, 35],
-          [0, 1, 2, 4, 7, 9],
-          [0, 2, 5, 9, 13, 17, 23, 29],
+          [0, 2, 4, 6, 8, 11, 15, 19, 23, 29, 35],
+          [0, 1, 2, 3, 4, 5],
+          [0, 1, 3, 4, 5, 6, 15, 19, 23],
           model_stats.err_mse,
           dict(enforce_stationarity=False,
                enforce_invertibility=False)
@@ -579,8 +591,7 @@ Notes:
       arima_parameters = config.arima_parameters
 #+end_src
 
-
-*** COMMENT ARIMA test
+*** ARIMA test
 #+begin_src python :results none 
   Xtrain = df_factors_train[factor_names].to_numpy()
   Xtest = df_factors_test[factor_names].to_numpy()
@@ -644,7 +655,7 @@ Warnings:
 [1] Covariance matrix calculated using the outer product of gradients (complex-step).
 #+end_example
 
-*** COMMENT ARIMA backtesting
+*** ARIMA backtesting
 
 #+begin_src python :results none 
   # prediction on train data
@@ -695,7 +706,7 @@ Warnings:
 #+RESULTS: ARIMA_backtest
 [[file:img/ARIMA_backtest.png]]
 
-*** COMMENT ARIMA model prediction
+*** ARIMA model prediction
 
 #+NAME: ARIMA_Mkt-RF_train
 #+begin_src python :results value file :exports results :var name=(org-element-property :name (org-element-context)) 
@@ -723,16 +734,15 @@ Warnings:
 #+RESULTS: ARIMA_Mkt-RF_test
 [[file:img/ARIMA_Mkt-RF_test.png]]
 
-** COMMENT Black-Litterman based portfolio
-:PROPERTIES:
-:header-args: :session py1 :tangle no
-:END:
-
-*** Views
+*** Views from model prediction
 EQT will rise 15%
 PH to outperform JPM by 11%
 KR to outperform ATO by 8%
 
+** COMMENT Black-Litterman based portfolio
+:PROPERTIES:
+:header-args: :session py1 :tangle no :exports none
+:END:
 *** Covariance treatment
 *** Prior and posterior returns construction
 
@@ -963,10 +973,18 @@ KR to outperform ATO by 8%
 *** Performance comparison
 
 
-
+* ARIMA 
 #+LaTeX: \appendix
 * Code execution
-The codes herein have been tested in linux (Ubuntu 22 and Centos 8) and in MacOs
+The codes herein have been tested in Linux (Ubuntu 22 and Centos 8) and in MacOs. To install and execute follow the next steps.
 
-
+** Installing the code
+For the installation it is recommended to use a Python environment manager such as Conda and with Python >=3.10. Codes reside in the folder ML4qf and it is install like a normal package: navigate to the ML4qf directory in a terminal and run 'pip install .' The package should now be installed and a good check is to run the tests as follows. 
 ** Testing
+A range of tests have been implemented using the library pytest to validate the codes in this work.
+They are located in the folder ./test and can be run by navigating to this folder and running 'pytest' in the terminal.  
+** Literate programming
+Both the pdf from code have been simultaneously generated from an Emacs .org file. This type of file bears resemblance with Python notebooks but it is more powerful, albeit being also much older.
+tangle
+export
+** 
