@@ -71,7 +71,7 @@ end_date_assets = "2022-12-01"
 start = datetime.datetime.strptime(start_date_assets, "%Y-%m-%d")
 end = datetime.datetime.strptime(end_date_assets, "%Y-%m-%d")
 days = (end - start).days
-train_test_ratio = 0.8
+train_test_ratio = 0.88
 split_data_idx = int(train_test_ratio * days * 12 / 365)
 
 lambda_mkt = 2.24
