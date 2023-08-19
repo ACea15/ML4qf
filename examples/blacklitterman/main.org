@@ -3,7 +3,7 @@
 #+PROPERTY: header-args :tangle ./main.py :mkdirp yes
 #+LATEX_HEADER: \usepackage[margin=1in]{geometry}
 #+LATEX_HEADER: \usepackage{mathtools}
-
+#+OPTIONS: broken-links:tc
 #+begin_comment
 #+OPTIONS: toc:nil
 #+LATEX_HEADER: \let\oldsection\section
@@ -235,6 +235,7 @@ The resulting basket is shown in Table  [[df_portfolio_summary]].
            tablefmt='orgtbl')
 #+end_src
 #+NAME: df_portfolio_summary
+#+CAPTION: Portfolio selected assets
 #+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption  
 #+RESULTS: Compute and show Data Frame, df_portfolio_summary
 |      |   marketCap | marketWeights | sector                 |
@@ -281,8 +282,18 @@ Fig. [[basket_returns]] shows the returns evolution of the assets over the perio
 #+NAME: basket_returns
 #+begin_src python :results value file  :exports results :var name=(org-element-property  :name (org-element-context))
   # Plot basket_returns
+  import plotly.graph_objs as go
+  layout = go.Layout(
+  margin=go.layout.Margin(
+        l=0, #left margin
+        r=0, #right margin
+        b=0, #bottom margin
+        t=0  #top margin
+    )
+  )
   fig1_path= img_dir / f'{name}.png'
   fig1 = px.line(df_assets, y=df_assets.keys())
+  fig1.update_layout(margin_b=3, margin_t=5)
   fig1.write_image(fig1_path)
   fig1_path #
 #+end_src
@@ -299,8 +310,9 @@ The correlation between the returns is a good indication of how well diversified
   fig1_path= img_dir / f'{name}.png'
   df_corr = df_assets.corr().round(2)
   fig1 = px.imshow(np.abs(df_corr))
-  fig1.layout.height = 600
-  fig1.layout.width = 600
+  #fig1.layout.height = 600
+  #fig1.layout.width = 600
+  fig1.update_layout(margin_l=0,margin_b=3, margin_t=5)
   fig1.write_image(fig1_path)
   fig1_path #
 #+end_src
