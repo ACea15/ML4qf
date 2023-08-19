@@ -71,7 +71,7 @@ end_date_assets = "2022-12-01"
 start = datetime.datetime.strptime(start_date_assets, "%Y-%m-%d")
 end = datetime.datetime.strptime(end_date_assets, "%Y-%m-%d")
 days = (end - start).days
-train_test_ratio = 0.88
+train_test_ratio = 0.9
 split_data_idx = int(train_test_ratio * days * 12 / 365)
 
 lambda_mkt = 2.24
@@ -87,13 +87,13 @@ arima_parameters = {'Mkt-RF': (15,0,15),
                     'MOM': (9,0,6)
                     }
 
-arima_parameters = {'Mkt-RF': (7,1,26),
-                    'SMB': (21,1,9),
-                    'HML': (13,2,1),
-                    'RMW': (15,0,6),
-                    'CMA': (15,4,6),
-                    'MOM': (21,2,23)
-                    }
+# arima_parameters = {'Mkt-RF': (7,1,26),
+#                     'SMB': (21,1,9),
+#                     'HML': (13,2,1),
+#                     'RMW': (15,0,6),
+#                     'CMA': (15,4,6),
+#                     'MOM': (21,2,23)
+#                     }
 
 # {'Mkt-RF': (7, 1, 26), 'SMB': (21, 1, 9), 'HML': (13, 2, 1), 'RMW': (15, 0, 6), 'CMA': (15, 4, 6), 'MOM': (21, 2, 23)}
 #{'Mkt-RF': (8, 0, 4), 'SMB': (15, 1, 5), 'HML': (0, 2, 15), 'RMW': (15, 0, 6), 'CMA': (15, 4, 6), 'MOM': (15, 2, 23)} # new

@@ -240,16 +240,16 @@ The resulting basket is shown in Table  [[df_portfolio_summary]].
 #+RESULTS: Compute and show Data Frame, df_portfolio_summary
 |      |   marketCap | marketWeights | sector                 |
 |------+-------------+---------------+------------------------|
-| JPM  | 4.48847e+11 |      0.546415 | Financial Services     |
-| CVS  | 9.59856e+10 |       0.11685 | Healthcare             |
-| ATVI | 7.17056e+10 |     0.0872924 | Communication Services |
-| PH   | 5.34366e+10 |     0.0650523 | Industrials            |
-| WELL | 4.18798e+10 |     0.0509834 | Real Estate            |
-| YUM  | 3.75877e+10 |     0.0457582 | Consumer Cyclical      |
-| KR   | 3.51552e+10 |      0.042797 | Consumer Defensive     |
-| ATO  | 1.69714e+10 |     0.0206606 | Utilities              |
-| EQT  | 1.55687e+10 |      0.018953 | Energy                 |
-| DXC  | 4.30288e+09 |    0.00523821 | Technology             |
+| JPM  | 4.46929e+11 |      0.544416 | Financial Services     |
+| CVS  | 9.56394e+10 |      0.116501 | Healthcare             |
+| ATVI | 7.18864e+10 |     0.0875667 | Communication Services |
+| PH   | 5.41743e+10 |     0.0659911 | Industrials            |
+| WELL | 4.24812e+10 |     0.0517475 | Real Estate            |
+| YUM  |   3.733e+10 |     0.0454727 | Consumer Cyclical      |
+| KR   | 3.53562e+10 |     0.0430683 | Consumer Defensive     |
+| ATO  | 1.69743e+10 |     0.0206769 | Utilities              |
+| EQT  | 1.59304e+10 |     0.0194052 | Energy                 |
+| DXC  | 4.23124e+09 |    0.00515418 | Technology             |
 
 *** Assets exploratory analysis
 Monthly returns are used for the analysis as a better metric for a portfolio that is not going to be rebalanced for long periods of time. A period of over 20 years is taken for both the analysis and the backtesting as to make sure a reasonable amount of data is utilised in the study. Table [[df_assets]] 
@@ -386,23 +386,23 @@ With the asset returns, the factors and the risk-free rate, the $\alpha$ vector 
 #+CAPTION: Factor analysis alphas and betas.  
 #+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption
 #+RESULTS: Data Frame df_train_factors with alphas and betas
-|      |       alpha |   Mkt-RF |        SMB |        HML |       RMW |       CMA |        MOM |
-|------+-------------+----------+------------+------------+-----------+-----------+------------|
-| JPM  |  0.00563626 | 0.908254 |   -0.22666 |    1.22866 |  -1.07388 | -0.528425 |  -0.292278 |
-| CVS  | -0.00150586 | 0.934148 |  -0.207898 |  0.0581141 |  0.350351 |    1.0657 |  0.0150695 |
-| ATVI |   0.0221258 | 0.954258 |   0.232224 |  -0.173592 | -0.455182 |  0.139466 |   0.416191 |
-| PH   | -0.00419705 |  1.53734 |   0.415025 |  -0.222542 |   1.18971 |  0.649222 |  -0.232595 |
-| WELL |  0.00133871 | 0.520551 |   0.317423 | -0.0261333 |  0.202619 |  0.395438 | -0.0621194 |
-| YUM  |  0.00401247 | 0.886379 |   0.492413 |  -0.303535 |   1.09974 | 0.0829882 |  -0.169236 |
-| KR   | -0.00154716 | 0.913941 |  -0.353481 |  -0.217052 |  0.468732 |   1.03135 |   0.200383 |
-| ATO  |  0.00116209 | 0.437769 |   0.297623 |  -0.190557 |  0.507524 |  0.509398 | -0.0215291 |
-| EQT  |    0.002473 | 0.834018 | -0.0800847 |  0.0711937 |  0.416891 |  0.257262 |  0.0740147 |
-| DXC  |  0.00428523 |  1.18813 |  -0.441472 |   -0.25501 | -0.122975 |  0.301193 |  -0.212394 |
+|      |        alpha |   Mkt-RF |       SMB |       HML |      RMW |        CMA |        MOM |
+|------+--------------+----------+-----------+-----------+----------+------------+------------|
+| JPM  |   0.00647651 | 0.922232 |  -0.28544 |   1.18559 | -1.07209 |  -0.493312 |  -0.273228 |
+| CVS  |  -0.00148262 | 0.868157 | -0.215823 |  0.012167 |  0.25336 |    1.07393 |   0.026691 |
+| ATVI |    0.0197562 | 0.889834 |  0.242885 | -0.206069 | -0.47066 |   0.212356 |    0.39213 |
+| PH   |  -0.00382804 |  1.49288 |  0.446137 | -0.124334 |  1.14579 |   0.475606 |  -0.236351 |
+| WELL |  0.000788633 |  0.58505 |  0.356454 |  0.135987 | 0.250443 |   0.247888 | -0.0239137 |
+| YUM  |   0.00341028 | 0.876246 |  0.410095 | -0.205616 |  1.00998 |  0.0557652 |  -0.120782 |
+| KR   | -7.80218e-05 | 0.758796 | -0.304005 | -0.211342 | 0.349079 |   0.986875 |   0.149481 |
+| ATO  |   0.00152634 | 0.401037 |  0.208798 |  -0.14717 | 0.374291 |   0.563191 |  0.0033396 |
+| EQT  |  -0.00322677 |  1.09022 |  0.140145 | -0.317918 | 0.955749 |   0.672032 | -0.0193002 |
+| DXC  |  -0.00517583 |  1.47021 | -0.098542 | 0.0172014 | 0.263557 | 0.00627073 |  -0.250473 |
 
 In Appendix [[sec:appx_arima]] a summary of the OLS calculation to approximate the factors is presented
 #+NAME: Summary of factors OLS
 #+begin_src python :results output :exports results :tangle no
-  print(factor_models[asset_names[6]].summary())
+  print(factor_models[asset_names[3]].summary())
 #+end_src
 
 #+NAME: Compute factor model prediction
@@ -488,26 +488,26 @@ In Appendix [[sec:appx_arima]] a summary of the OLS calculation to approximate t
   fig1_path = plot_rets_fromfactors(df_assets_test,
                                    df_factors_test,
                                    df_returns_pred,
-                                   i_asset=3, name=name)
+                                   i_asset=1, name=name)
   fig1_path #
 #+end_src
 #+CAPTION:  Backtesting factor approaximation on Google asset
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: predicted_factorreturns_test
-[[file:img/predicted_factorreturns_testPH.png]]
+[[file:img/predicted_factorreturns_testCVS.png]]
 
 #+NAME: predicted_factorreturns_train
 #+begin_src python :noweb eval :results value file  :exports results :var name=(org-element-property :name (org-element-context))
   fig1_path = plot_rets_fromfactors(df_assets_train,
                                     df_factors_train,
                                     df_returns_predt,
-                                    i_asset=3, name=name)
+                                    i_asset=1, name=name)
   fig1_path #
 #+end_src
 #+CAPTION:  Backtesting factor approaximation on Google asset
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: predicted_factorreturns_train
-[[file:img/predicted_factorreturns_trainPH.png]]
+[[file:img/predicted_factorreturns_trainCVS.png]]
 
 ** ARIMA model for the the generation of asset views
 :PROPERTIES:
@@ -578,23 +578,23 @@ Table [[df_arima_parameters]] shows the parameters used in the ARIMA model after
 #+RESULTS: df_arima_parameters
 |   | Mkt-RF | SMB | HML | RMW | CMA | MOM |
 |---+--------+-----+-----+-----+-----+-----|
-| p |      7 |  21 |  13 |  15 |  15 |  21 |
-| d |      1 |   1 |   2 |   0 |   4 |   2 |
-| q |     26 |   9 |   1 |   6 |   6 |  23 |
+| p |     15 |  15 |   6 |  15 |   6 |   9 |
+| d |      0 |   0 |   0 |   0 |   4 |   0 |
+| q |     15 |   9 |   3 |   6 |  12 |   6 |
 
-*** COMMENT ARIMA factors prediction
+*** ARIMA factors prediction
 
 #+begin_src python :results none 
   Xtrain = df_factors_train[factor_names].to_numpy()
   Xtest = df_factors_test[factor_names].to_numpy()
   index_train = df_factors_train.index
   index_test = df_factors_test.index
-  # arima_parameters = {'Mkt-RF': (15,0,15),
+  # arima_parameters = {'Mkt-RF': (3,0,21),
   #                     'SMB': (15,0,9),
   #                     'HML': (6,0,3),
   #                     'RMW': (15,0,6),
-  #                     'CMA': (6,4,12),
-  #                     'MOM': (0,1,0)
+  #                     'CMA': (21,3,12),
+  #                     'MOM': (12,0,21)
   #                     }
   #arima_parameters = config.arima_parameters
   model_sett = dict(enforce_stationarity=False,
@@ -677,7 +677,7 @@ Warnings:
 #+NAME: ARIMA_Mkt-RF_train
 #+begin_src python :results value file :exports results :var name=(org-element-property :name (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
-  fig1 = px.line(df_arimatrain, y=['Mkt-RF','Mkt-RF_pred'])
+  fig1 = px.line(df_arimatrain, y=['HML','HML_pred'])
   fig1.write_image(fig1_path)
   fig1_path #
 
@@ -690,7 +690,7 @@ Warnings:
 #+NAME: ARIMA_Mkt-RF_test
 #+begin_src python :results value file :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
-  fig1 = px.line(df_arimatest, y=['Mkt-RF','Mkt-RF_pred'])
+  fig1 = px.line(df_arimatest, y=['HML','HML_pred'])
   fig1.write_image(fig1_path)
   fig1_path #
 
@@ -700,8 +700,8 @@ Warnings:
 #+RESULTS: ARIMA_Mkt-RF_test
 [[file:img/ARIMA_Mkt-RF_test.png]]
 
-*** Backtesting of returns
-
+*** Backtesting of returns and views from model prediction
+Using the ARIMA model built on the training data set, predicted returns are projected onto the "future", i.e. the testing set, for over two years. The cumulative returns are then compared so that the views for the Black-Litterman model can be proposed. 
 #+begin_src python :results none 
   # prediction on train data
   fnames_prediction = [k for k in df_arimatrain.columns if "_pred" in k]
@@ -723,43 +723,89 @@ Warnings:
      {k: 1. for k in df_arimaasset_test.columns})
 #+end_src
 
-
 #+NAME: ARIMA_returnsbacktest
-#+begin_src python :results value file :exports results :var name=(org-element-property :name  (org-element-context)) 
+#+begin_src python :results value file :exports none :var name=(org-element-property :name  (org-element-context))
+  # no exporting, just for experimenting
   fig1_path= img_dir / f'{name}.png'
   #fig1 = px.line(df_arimaasset_test, y=['JPM_pred', 'JPM','EQT','EQT_pred'])
-  fig1 = px.line(df_arimaasset_test, y=['JPM', 'JPM_pred'])
+  fig1 = px.line(df_arimaasset_test, y=['JPM', 'JPM_pred', 'PH','PH_pred'])
   fig1.write_image(fig1_path)
   fig1_path #
 
 #+end_src
-#+CAPTION: daa
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: ARIMA_returnsbacktest
 [[file:img/ARIMA_returnsbacktest.png]]
-
-
-#+NAME: ARIMA_backtest
+#
+The first assets we compare are JPM and PH, which showed one of the strongest correlations. Fig. [[ARIMA_returnsbacktestJPM_PH]] shows PH outperforming JPM by nearly 11% over the period of 26 months.
+#+NAME: ARIMA_returnsbacktestJPM_PH
 #+begin_src python :results value file :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
-  fig1 = px.line(df_arimatest_profits, y=['ATO', 'ATO_pred', 'KR','KR_pred'])
+  fig1 = px.line(df_arimatest_profits, y=['JPM','JPM_pred','PH','PH_pred'],
+                 labels={'value':'Cumulative returns'})
+  #fig1 = px.line(df_arimaasset_test, y=['JPM', 'JPM_pred'])
+  fig1.update_layout(margin_l=0,margin_b=3, margin_t=5)
+  fig1.write_image(fig1_path)
+  fig1_path #
+#+end_src
+#+CAPTION: Prediction and real Cumulative returs for JPM and PH
+#+NAME:ARIMA_returnsbacktestJPM_PH
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: ARIMA_returnsbacktestJPM_PH
+[[file:img/ARIMA_returnsbacktestJPM_PH.png]]
+Looking at an absolute view, we can see in Fig. [[ARIMA_returnsbacktestEQT]] the forecast of the energy company EQT is better than many of the others --although it is not close to the actual growth the asset underwent over this period. A 29% increment is predicted and it is what will be taken for the view. 
+#+NAME: ARIMA_returnsbacktestEQT
+#+begin_src python :results value file :exports results :var name=(org-element-property :name  (org-element-context)) 
+  fig1_path= img_dir / f'{name}.png'
+  fig1 = px.line(df_arimatest_profits,
+                 y=['EQT', 'EQT_pred', 'WELL', 'WELL_pred', 'DXC', 'DXC_pred'],
+                 labels={'value':'Comulative returns'})
+  #fig1 = px.line(df_arimaasset_test, y=['JPM', 'JPM_pred'])
+  fig1.update_layout(margin_l=0,margin_b=3, margin_t=5)
   fig1.write_image(fig1_path)
   fig1_path #
 
 #+end_src
-#+CAPTION: daa
+#+CAPTION: Prediction and real Cumulative returs for WELL, DXC and EQT
+#+NAME: ARIMA_returnsbacktestEQT
 #+ATTR_LATEX: :width 0.75\textwidth 
-#+RESULTS: ARIMA_backtest
-[[file:img/ARIMA_backtest.png]]
+#+RESULTS: ARIMA_returnsbacktestEQT
+[[file:img/ARIMA_returnsbacktestEQT.png]]
 
-*** Views from model prediction
-Given the previous results on the testing data set, the following views are proposed: 
-- EQT will rise 15%
-- PH to outperform JPM by 11%
-- KR to outperform ATO by 8%
-The matrix and vector views are then:
+Finally an interesting comparison appears for the ATO and KR tickers, where the increasing spread is rather well captured by the forecasting factor model. 
+#+NAME: ARIMA_returnsbacktestATO
+#+begin_src python :results value file :exports results :var name=(org-element-property :name  (org-element-context)) 
+  fig1_path= img_dir / f'{name}.png'
+  fig1 = px.line(df_arimatest_profits,
+                 y=['ATO', 'ATO_pred', 'KR','KR_pred'],
+                 labels={'value':'Comulative returns'})
+  fig1.update_layout(margin_l=0,margin_b=3, margin_t=5)
+  fig1.write_image(fig1_path)
+  fig1_path #
+
+#+end_src
+#+CAPTION: Prediction and real Cumulative returs for ATO and KR
+#+NAME: ARIMA_returnsbacktestATO
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: #+NAME: ARIMA_returnsbacktestATO
+[[file:img/ARIMA_returnsbacktestATO.png]]
+
+Given these results on the testing data set, the following views are proposed: 
+- EQT to rise 12% annually
+- PH to outperform JPM by 6% annually
+- KR to outperform ATO by 5% annually
+The matrix and vector views, $P$ and $Q$, are then:
 $$
-P = f
+P = \begin{bmatrix}
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0  \\
+   -1 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0  \\
+    0 & 0 & 0 & 0 & 0 & 0 & 1 &-1 & 0 & 0  
+\end{bmatrix}
+$$
+$$
+Q = \begin{bmatrix}
+    0.12 & 0.06 & 0.05
+\end{bmatrix}
 $$
 
 
@@ -1007,30 +1053,30 @@ Summary of factors OLS:
 #+begin_example
                             OLS Regression Results                            
 ==============================================================================
-Dep. Variable:                      y   R-squared:                       0.229
-Model:                            OLS   Adj. R-squared:                  0.207
-Method:                 Least Squares   F-statistic:                     10.51
-Date:                Fri, 18 Aug 2023   Prob (F-statistic):           3.32e-10
-Time:                        19:20:18   Log-Likelihood:                 300.00
-No. Observations:                 219   AIC:                            -586.0
-Df Residuals:                     212   BIC:                            -562.3
+Dep. Variable:                      y   R-squared:                       0.596
+Model:                            OLS   Adj. R-squared:                  0.586
+Method:                 Least Squares   F-statistic:                     57.52
+Date:                Sat, 19 Aug 2023   Prob (F-statistic):           2.27e-43
+Time:                        09:30:45   Log-Likelihood:                 362.43
+No. Observations:                 241   AIC:                            -710.9
+Df Residuals:                     234   BIC:                            -686.5
 Df Model:                           6                                         
 Covariance Type:            nonrobust                                         
 ==============================================================================
                  coef    std err          t      P>|t|      [0.025      0.975]
 ------------------------------------------------------------------------------
-const         -0.0015      0.005     -0.342      0.733      -0.010       0.007
-x1             0.9139      0.126      7.242      0.000       0.665       1.163
-x2            -0.3535      0.168     -2.101      0.037      -0.685      -0.022
-x3            -0.2171      0.197     -1.105      0.271      -0.604       0.170
-x4             0.4687      0.221      2.123      0.035       0.034       0.904
-x5             1.0314      0.283      3.644      0.000       0.473       1.589
-x6             0.2004      0.090      2.228      0.027       0.023       0.378
+const         -0.0037      0.004     -0.989      0.324      -0.011       0.004
+x1             1.5265      0.102     14.974      0.000       1.326       1.727
+x2             0.4244      0.140      3.029      0.003       0.148       0.700
+x3            -0.1418      0.160     -0.889      0.375      -0.456       0.173
+x4             1.1572      0.185      6.269      0.000       0.793       1.521
+x5             0.5258      0.235      2.240      0.026       0.063       0.988
+x6            -0.2241      0.077     -2.914      0.004      -0.376      -0.073
 ==============================================================================
-Omnibus:                        1.427   Durbin-Watson:                   2.004
-Prob(Omnibus):                  0.490   Jarque-Bera (JB):                1.124
-Skew:                          -0.055   Prob(JB):                        0.570
-Kurtosis:                       3.334   Cond. No.                         75.7
+Omnibus:                        2.734   Durbin-Watson:                   2.168
+Prob(Omnibus):                  0.255   Jarque-Bera (JB):                2.908
+Skew:                          -0.013   Prob(JB):                        0.234
+Kurtosis:                       3.538   Cond. No.                         75.7
 ==============================================================================
 
 Notes:
