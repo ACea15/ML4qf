@@ -141,6 +141,10 @@ $$
 Var(\Pi) = Var(r_a^{\top} w_a) = Var(r_a^{\top} w_a)
 $$
 
+$$
+\Sigma = B^{\top} \Sigma_f B 
+$$
+
 ** ARIMA model for time series
 AutoRegressive Integrated Moving Average (ARIMA) statistical models are used 
 AR: Autoregression. A model that uses the dependent relationship between an observation and some number of lagged observations.
@@ -809,15 +813,16 @@ Q = \begin{bmatrix}
 $$
 
 
-** COMMENT Black-Litterman based portfolio
+** Black-Litterman based portfolio
 :PROPERTIES:
 :header-args: :session py1 :tangle no :exports none
 :END:
-*** Covariance treatment
+*** COMMENT Covariance treatment
 *** Prior and posterior returns construction
-
+The first step in the calculation is the covariance between the assets. One could use the data forecast in the test data but it would have entailed the combination of a GARCH model with the ARIMA model to accurately predict the variances, which was not a requirement in this work. Thus historical data (training batch) is relied upon. Two options are possible, either calculate the covariance directly on the excess returns, or on the factors and derive the subsequent covariance on the returns using the matrix of betas. 
 #+NAME: Calculate Covariance of excess returns
-#+begin_src python :results none 
+#+begin_src python :results none
+  # Calculate Covariance from assets and from factors
   df_Sigma_factors = df_factors[factor_names].cov()
   df_Sigma_factors_train = df_factors_train[factor_names].cov()
   df_Sigma_factors_test = df_factors_test[factor_names].cov()
@@ -828,28 +833,56 @@ $$
   Sigma_factors_test = df_Sigma_factors_test.to_numpy()
   Sigmainv_factors_test = np.linalg.inv(Sigma_factors_test)
   #####
-  df_Sigma_assets = df_assets.cov()
-  df_Sigma_assets_train = df_assets_train.cov()
-  df_Sigma_assets_test = df_assets_test.cov()
-  Sigma_assets = df_Sigma_assets.to_numpy()
-  Sigmainv_assets = np.linalg.inv(Sigma_assets)
-  Sigma_assets_train = df_Sigma_assets_train.to_numpy()
-  Sigmainv_assets_train = np.linalg.inv(Sigma_assets_train)
-  Sigma_assets_test = df_Sigma_assets_test.to_numpy()
-  Sigmainv_assets_test = np.linalg.inv(Sigma_assets_test)
-  #####
   Sigma_4mfactors = beta.T @ Sigma_factors @ beta
   Sigmainv_4mfactors = np.linalg.inv(Sigma_4mfactors)
   Sigma_4mfactors_train = beta.T @ Sigma_factors_train @ beta
   Sigmainv_4mfactors_train = np.linalg.inv(Sigma_4mfactors_train)
   Sigma_4mfactors_test = beta.T @ Sigma_factors_test @ beta
   Sigmainv_4mfactors_test = np.linalg.inv(Sigma_4mfactors_test)
+  ####################
+  df_Sigma_assets = df_assets.cov()
+  df_Sigma_assets_train = df_assets_train.cov()
+  df_Sigma_assets_test = df_assets_test.cov()
+  #Sigma_assets = df_Sigma_assets.to_numpy()
+  Sigma_assets = np.cov((df_assets.to_numpy() - df_factors.RF.to_numpy().reshape(len(df_factors.RF), 1)).T)
+  Sigmainv_assets = np.linalg.inv(Sigma_assets)
+  #Sigma_assets_train = df_Sigma_assets_train.to_numpy()
+  Sigma_assets_train = np.cov((df_assets_train.to_numpy() - df_factors_train.RF.to_numpy().reshape(len(df_factors_train.RF), 1)).T)
+  Sigmainv_assets_train = np.linalg.inv(Sigma_assets_train)
+  #Sigma_assets_test = df_Sigma_assets_test.to_numpy()
+  Sigma_assets_test = np.cov((df_assets_test.to_numpy() - df_factors_test.RF.to_numpy().reshape(len(df_factors_test.RF), 1)).T)
+  Sigmainv_assets_test = np.linalg.inv(Sigma_assets_test)
 
 #+end_src
+Covariance matrix of the excess returns is shown in Table [[df_Sigma_train]]. 
+#+NAME: df_Sigma_train
+#+begin_src python  :results raw :exports results :tangle no
+  tabulate(df_Sigma_assets_train.round(decimals=4),
+           headers=df_Sigma_assets_train.columns,
+           showindex=True, tablefmt='orgtbl')
+#+end_src
+#+NAME: df_Sigma_train
+#+CAPTION: Covariance matrix of excess returns on training data
+#+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption
+#+RESULTS: df_Sigma_train
+|      |    JPM |    CVS |   ATVI |     PH |   WELL |    YUM |     KR |    ATO |    EQT |    DXC |
+|------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------|
+| JPM  | 0.0075 | 0.0015 | 0.0027 | 0.0032 | 0.0017 | 0.0015 | 0.0011 | 0.0006 | 0.0011 | 0.0039 |
+| CVS  | 0.0015 | 0.0055 |      0 | 0.0028 | 0.0008 | 0.0009 | 0.0016 | 0.0006 | 0.0013 | 0.0018 |
+| ATVI | 0.0027 |      0 | 0.0134 | 0.0013 | 0.0005 | 0.0015 | 0.0007 | 0.0008 |  0.002 | 0.0024 |
+| PH   | 0.0032 | 0.0028 | 0.0013 | 0.0074 | 0.0017 | 0.0026 | 0.0009 | 0.0008 | 0.0029 | 0.0044 |
+| WELL | 0.0017 | 0.0008 | 0.0005 | 0.0017 | 0.0044 | 0.0015 | 0.0004 | 0.0011 | 0.0006 | 0.0011 |
+| YUM  | 0.0015 | 0.0009 | 0.0015 | 0.0026 | 0.0015 | 0.0052 | 0.0008 | 0.0003 | 0.0018 | 0.0027 |
+| KR   | 0.0011 | 0.0016 | 0.0007 | 0.0009 | 0.0004 | 0.0008 |  0.005 | 0.0005 | 0.0008 | 0.0009 |
+| ATO  | 0.0006 | 0.0006 | 0.0008 | 0.0008 | 0.0011 | 0.0003 | 0.0005 | 0.0023 | 0.0009 | 0.0005 |
+| EQT  | 0.0011 | 0.0013 |  0.002 | 0.0029 | 0.0006 | 0.0018 | 0.0008 | 0.0009 | 0.0124 | 0.0034 |
+| DXC  | 0.0039 | 0.0018 | 0.0024 | 0.0044 | 0.0011 | 0.0027 | 0.0009 | 0.0005 | 0.0034 | 0.0141 |
+Next the market equilibrium returns are calculated from the market weights presented in Table [[df_portfolio_summary]]. 
 
 #+NAME: Compute equilibrium returns 
 #+begin_src python :results none 
   f_mu = lambda l, S, w: l * S @ w
+  f_w = lambda l, Sinv, mu: 1/ l * Sinv @ mu
   mu_mkt_assets = f_mu(config.lambda_mkt, Sigma_assets_train, w_mkt)
   mu_mkt_4mfactors = f_mu(config.lambda_mkt, Sigma_4mfactors_train, w_mkt)
   w1_assets_theoretical = optimization.mean_variance_opt(mu_mkt_assets, Sigmainv_assets_train, config.lambda_portfolio[0])
@@ -862,21 +895,56 @@ $$
 
 #+NAME: Black-Litterman initialisation
 #+begin_src python :results none 
-  bl_model_Sassets = bl.BlackLitterman(Sigma_assets_train, w_mkt, config.lambda_mkt)
+  bl_model_Sassets = bl.BlackLitterman(Sigma_assets_train, w_mkt,
+                                       config.lambda_mkt)
   bl_model_Sassets.set_portfolio_inputs(config.tau, config.P, config.Q)
-  bl_model_Sfactors = bl.BlackLitterman(Sigma_4mfactors_train, w_mkt, config.lambda_mkt)
+  bl_model_Sfactors = bl.BlackLitterman(Sigma_4mfactors_train, w_mkt,
+                                        config.lambda_mkt)
   bl_model_Sfactors.set_portfolio_inputs(config.tau, config.P, config.Q)
-
-  bl_model_Sfactors.mu_mkt
-  bl_model_Sassets.mu_mkt
+  w_bl = f_w(config.lambda_mkt,
+             Sigmainv_assets_train,
+             bl_model_Sassets.mu_bl)
+  returns_weights_eq = {"mu_bl": bl_model_Sassets.mu_bl,
+                        "mu_mkt": bl_model_Sassets.mu_mkt,
+                        "mu_bl - mu_mkt": bl_model_Sassets.mu_bl -
+                        bl_model_Sassets.mu_mkt,
+                        "w_bl": w_bl,
+                        "w_mkt": w_mkt,
+                        "w_bl - w_mkt": w_bl - w_mkt
+                        }
+  df_returns_weights_eq = pd.DataFrame(returns_weights_eq,
+                                       index=asset_names,)
 #+end_src
+The implied equilibrium returns, Black-Litterman returns and their respective weights can be found in Table [[df_returns_weights_eq]]. The way the views affect the allocations is clear: 
+#+NAME: df_returns_weights_eq
+#+begin_src python  :results raw :exports results :tangle no
+  tabulate(df_returns_weights_eq.round(decimals=5),
+           headers=df_returns_weights_eq.columns,
+           showindex=True, tablefmt='orgtbl')
+#+end_src
+#+NAME: df_returns_weights_eq
+#+CAPTION: Equilibrium return and portfolio weights
+#+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption
+#+RESULTS: df_returns_weights_eq
+|      |   mu_bl |  mu_mkt | mu_bl - mu_mkt |     w_bl |   w_mkt | w_bl - w_mkt |
+|------+---------+---------+----------------+----------+---------+--------------|
+| JPM  | 0.00926 | 0.01121 |       -0.00195 |  0.30334 | 0.54442 |     -0.24107 |
+| CVS  |  0.0054 | 0.00417 |        0.00122 |   0.1165 |  0.1165 |            0 |
+| ATVI | 0.00618 |  0.0065 |       -0.00032 |  0.08757 | 0.08757 |           -0 |
+| PH   | 0.00969 | 0.00677 |        0.00292 |  0.30706 | 0.06599 |      0.24107 |
+| WELL | 0.00338 | 0.00345 |         -6e-05 |  0.05175 | 0.05175 |            0 |
+| YUM  | 0.00478 | 0.00366 |        0.00111 |  0.04547 | 0.04547 |            0 |
+| KR   | 0.00396 | 0.00276 |        0.00119 |  0.15388 | 0.04307 |      0.11082 |
+| ATO  | 0.00135 | 0.00151 |       -0.00017 | -0.09014 | 0.02068 |     -0.11082 |
+| EQT  | 0.00721 |  0.0035 |        0.00371 |  0.12009 | 0.01941 |      0.10069 |
+| DXC  | 0.00835 | 0.00719 |        0.00116 |  0.00515 | 0.00515 |           -0 |
 
 *** Portfolio weights optimisation
 
 #+NAME: Calculate Covariance of factors
 #+begin_src python :results none 
 
-  lmb_p = config.lambda_portfolio[2]
+  lmb_p = config.lambda_portfolio[1]
   x0 = 1. / num_assets * np.ones(num_assets)
   args = (bl_model_Sassets.mu_bl,            
           bl_model_Sassets.Sigma,          
@@ -893,7 +961,7 @@ $$
 #+NAME: Compute porfolio weights frontier
 #+begin_src python :results none 
 
-  lmb_p = config.lambda_portfolio[2]
+  lmb_p = config.lambda_portfolio[1]
 
   x0 = 1. / num_assets * np.ones(num_assets)
   args = (mu_mkt_assets*12,
@@ -901,7 +969,7 @@ $$
           0.1)
   args = (bl_model_Sassets.mu_mkt*12,            
           bl_model_Sassets.Sigma,          
-          0.06)
+          0.11)
 
   cons_sett = dict(eq_rets=dict(type="eq"),
                    eq_weights1=dict(type="eq"),
@@ -1017,13 +1085,16 @@ $$
 
 #+begin_src python :results none 
   weights_sol = {k: res1.x[i] for i, k in enumerate(asset_names)}
+  #weights_sol = {k: w1_assets_opt[i] for i, k in enumerate(asset_names)}
   df_profits_sol = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol)
   weights_naive = {k: x0[i] for i, k in enumerate(asset_names)}  
   df_profits_naive = ml4qf.utils.profit_portfolio(df_assets_test, weights_naive)
 
-  df_profits = pd.DataFrame(np.array([df_profits_sol.sum(axis=1).to_numpy(),
-                             df_profits_naive.sum(axis=1).to_numpy()]).T,
-                             columns=['Opt', 'Naive'], index=df_profits_sol.index)
+  df_profits = pd.DataFrame(np.array([
+      #df_profits_sol.sum(axis=1).to_numpy()-df_factors_test.RF * (sum(w1_assets_opt)-1),
+      df_profits_sol.sum(axis=1).to_numpy(),
+      df_profits_naive.sum(axis=1).to_numpy()]).T,
+                            columns=['Opt', 'Naive'], index=df_profits_sol.index)
 #+end_src
 
 #+NAME: P&L_plot
