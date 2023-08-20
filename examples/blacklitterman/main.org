@@ -816,7 +816,7 @@ $$
 
 ** Black-Litterman based portfolio
 :PROPERTIES:
-:header-args: :session py1 :exports none :var name=(org-element-property :name  (org-element-context)) 
+:header-args: :session py1 :exports none :tangle yes
 :END:
 *** COMMENT Covariance treatment
 *** Prior and posterior returns construction
@@ -902,7 +902,9 @@ Next the market equilibrium returns are calculated from the market weights prese
                                        index=asset_names,)
 #+end_src
 #
-The implied equilibrium returns, Black-Litterman returns and their respective weights can be found in Table [[df_returns_weights_eq]]. The way the views affect the allocations is clear: 
+The implied equilibrium returns, Black-Litterman returns and their respective weights can be found in Table [[df_returns_weights_eq]].
+The difference represents the so called active risk
+The way the views affect the allocations is clear: 
 #+NAME: df_returns_weights_eq
 #+begin_src python  :results raw :exports results :tangle no
   tabulate(df_returns_weights_eq.round(decimals=5),
@@ -1046,8 +1048,9 @@ The implied equilibrium returns, Black-Litterman returns and their respective we
                                           ))
       return df_weights_vols
 #+end_src
+Three types of optimisation are explored, namely *mean-variance* without constraints, for which analytical solutions are available; *variance* optimisation with constraints of weights and *Sharpe ratio* also with constraints. The optimisation is carried out using a Sequential Least Squares Programming (SLSQP) algorithm as implemented in Scipy. This algorithm allows for both nonlinear objective and constraints functions.  
 **** Objective: Mean variance
-The first optimization performed is a mean-variance without constraints and since there is a close form solution, a comparison is made for verification of the optimization framework. 
+The first optimization performed is a mean-variance without constraints and since there is a close form solution, a comparison is made for verification of the optimization framework. Three types of risk aversion are considered with $\lambda_{portfolio} = [0.1, 2.24, 6]$ (w1, w2, w3 respectively). The results are presented in Table [[df_meanvariance_weights]], illustrating a very good comparison between theoretical and optimised weights after setting the appropriate tolerances to the optimiser. It is worth highlighting the views have shifted allocation from JPM to PH, over a sixfold increase in the KR weight and a shorting position of ATO in favour of KR.     
 #+NAME: Compute equilibrium returns 
 #+begin_src python :results none 
   f_mu = lambda l, S, w: l * S @ w
@@ -1119,19 +1122,20 @@ The first optimization performed is a mean-variance without constraints and sinc
 #+RESULTS: df_meanvariance_weights
 |               |     JPM |    CVS |   ATVI |     PH |   WELL |    YUM |     KR |     ATO |    EQT |    DXC |
 |---------------+---------+--------+--------+--------+--------+--------+--------+---------+--------+--------|
-| w1_{mkt}(opt) | 12.1949 | 2.6095 | 1.9614 | 1.4779 | 1.1595 | 1.0187 |  0.965 |  0.4632 | 0.4347 | 0.1155 |
-| w1_mkt_theo   | 12.1949 | 2.6096 | 1.9615 | 1.4782 | 1.1591 | 1.0186 | 0.9647 |  0.4632 | 0.4347 | 0.1155 |
-| w2_mkt_opt    |  0.5444 | 0.1165 | 0.0876 |  0.066 | 0.0517 | 0.0455 | 0.0431 |  0.0207 | 0.0194 | 0.0052 |
-| w2_mkt_theo   |  0.5444 | 0.1165 | 0.0876 |  0.066 | 0.0517 | 0.0455 | 0.0431 |  0.0207 | 0.0194 | 0.0052 |
-| w3_mkt_opt    |  0.2032 | 0.0435 | 0.0327 | 0.0246 | 0.0193 |  0.017 | 0.0161 |  0.0077 | 0.0072 | 0.0019 |
-| w3_mkt_theo   |  0.2032 | 0.0435 | 0.0327 | 0.0246 | 0.0193 |  0.017 | 0.0161 |  0.0077 | 0.0072 | 0.0019 |
-| w1_bl_opt     |  6.7948 | 2.6097 | 1.9615 | 6.8783 | 1.1591 | 1.0185 | 3.4471 | -2.0191 |   2.69 | 0.1155 |
-| w1_bl_theo    |  6.7949 | 2.6096 | 1.9615 | 6.8782 | 1.1591 | 1.0186 |  3.447 | -2.0191 | 2.6901 | 0.1155 |
-| w2_bl_opt     |  0.3033 | 0.1165 | 0.0876 | 0.3071 | 0.0518 | 0.0455 | 0.1539 | -0.0901 | 0.1201 | 0.0052 |
-| w2_bl_theo    |  0.3033 | 0.1165 | 0.0876 | 0.3071 | 0.0517 | 0.0455 | 0.1539 | -0.0901 | 0.1201 | 0.0052 |
-| w3_bl_opt     |  0.1132 | 0.0435 | 0.0327 | 0.1146 | 0.0193 |  0.017 | 0.0574 | -0.0337 | 0.0448 | 0.0019 |
-| w3_bl_theo    |  0.1132 | 0.0435 | 0.0327 | 0.1146 | 0.0193 |  0.017 | 0.0574 | -0.0337 | 0.0448 | 0.0019 |
+| w1_{mkt-opt}  | 12.1949 | 2.6095 | 1.9614 | 1.4779 | 1.1595 | 1.0187 |  0.965 |  0.4632 | 0.4347 | 0.1155 |
+| w1_{mkt-theo} | 12.1949 | 2.6096 | 1.9615 | 1.4782 | 1.1591 | 1.0186 | 0.9647 |  0.4632 | 0.4347 | 0.1155 |
+| w2_{mkt-opt}  |  0.5444 | 0.1165 | 0.0876 |  0.066 | 0.0517 | 0.0455 | 0.0431 |  0.0207 | 0.0194 | 0.0052 |
+| w2_{mkt-theo} |  0.5444 | 0.1165 | 0.0876 |  0.066 | 0.0517 | 0.0455 | 0.0431 |  0.0207 | 0.0194 | 0.0052 |
+| w3_{mkt-opt}  |  0.2032 | 0.0435 | 0.0327 | 0.0246 | 0.0193 |  0.017 | 0.0161 |  0.0077 | 0.0072 | 0.0019 |
+| w3_{mkt-theo} |  0.2032 | 0.0435 | 0.0327 | 0.0246 | 0.0193 |  0.017 | 0.0161 |  0.0077 | 0.0072 | 0.0019 |
+| w1_{bl-opt}   |  6.7948 | 2.6097 | 1.9615 | 6.8783 | 1.1591 | 1.0185 | 3.4471 | -2.0191 |   2.69 | 0.1155 |
+| w1_{bl-theo}  |  6.7949 | 2.6096 | 1.9615 | 6.8782 | 1.1591 | 1.0186 |  3.447 | -2.0191 | 2.6901 | 0.1155 |
+| w2_{bl-opt}   |  0.3033 | 0.1165 | 0.0876 | 0.3071 | 0.0518 | 0.0455 | 0.1539 | -0.0901 | 0.1201 | 0.0052 |
+| w2_{bl-theo}  |  0.3033 | 0.1165 | 0.0876 | 0.3071 | 0.0517 | 0.0455 | 0.1539 | -0.0901 | 0.1201 | 0.0052 |
+| w3_{bl-opt}   |  0.1132 | 0.0435 | 0.0327 | 0.1146 | 0.0193 |  0.017 | 0.0574 | -0.0337 | 0.0448 | 0.0019 |
+| w3_{bl-theo}  |  0.1132 | 0.0435 | 0.0327 | 0.1146 | 0.0193 |  0.017 | 0.0574 | -0.0337 | 0.0448 | 0.0019 |
 
+For backtesting the performance of the cumulative returns 
 #+begin_src python :results none 
   weights_sol_mkt = {k: res_portfolios_mkt[1].x[i] for i, k in enumerate(asset_names)}
   weights_sol_bl = {k: res_portfolios_bl[1].x[i] for i, k in enumerate(asset_names)}
@@ -1161,12 +1165,14 @@ The first optimization performed is a mean-variance without constraints and sinc
   fig1.write_image(fig1_path)
   fig1_path
 #+end_src
-
+#+NAME: P&L_plot_meanvariance
+#+CAPTION: Mean variance optimization weights
+#+ATTR_LATEX: :width 1\textwidth :environment longtable :caption
 #+RESULTS: P&L_plot_meanvariance
 [[file:img/P&L_plot_meanvariance.png]]
 
 **** Objective: variance with constraints
-By setting the portfolio variance as the optimization objective and adding as constraints a target return and 
+By setting the portfolio variance as the optimization objective and adding as constraints a target return (that is varied) and weights to be bigger than 0, one can construct a portfolio composition map for varying volatilities. This is shown in Figures [[Weights_Composition_mkt]] and [[Weights_Composition_bl]] for the expected equilibrium returns without and with views respectively.     
 #+NAME: df for variance weights composition
 #+begin_src python :results none 
   # df for variance weights composition
@@ -1193,7 +1199,7 @@ By setting the portfolio variance as the optimization objective and adding as co
   fig1_path
 #+end_src
 #+NAME: Weights_Composition_mkt
-#+CAPTION:  Backtesting factor approaximation on Google asset
+#+CAPTION: Allocations weights for optimal portfolio with varying volatilities. 
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: Weights_Composition_mkt
 [[file:img/Weights_Composition_mkt.png]]
@@ -1209,24 +1215,25 @@ By setting the portfolio variance as the optimization objective and adding as co
   fig1_path
 #+end_src
 #+NAME: Weights_Composition_bl
-#+CAPTION:  Backtesting factor approaximation on Google asset
+#+CAPTION: Black-Litterman allocations weights for optimal portfolio with varying volatilities. 
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: Weights_Composition_bl
 [[file:img/Weights_Composition_bl.png]]
 
+Next the P&L of the variance optimisation is calculated for a target return of 10% annually which leads to a portfolio volatility of around 20%. As shown in Fig. [[P&L_plot_variance]], the portfolio with views consistently outperforms the Naive portfolio, not so the portfolio with implied market returns.  
 #+NAME: Compute variance optimization
 #+begin_src python :results none 
-
+  # Compute variance optimization
   x0 = 1. / num_assets * np.ones(num_assets)
   args = (bl_model_Sassets.mu_mkt,            
           bl_model_Sassets.Sigma,          
-          0.095/12)
+          0.10/12)
 
   cons_sett = dict(eq_rets=dict(type="eq"),
                    eq_weights1=dict(type="eq"),
                    ieq_weights0=dict(type="ineq")
                    )
-  res_mkt = optimization.scipy_minimize("variance",
+  resv_mkt = optimization.scipy_minimize("variance",
                                      x0,
                                      method_name='SLSQP',
                                      args=args,
@@ -1234,34 +1241,32 @@ By setting the portfolio variance as the optimization objective and adding as co
                                      options=dict(maxiter=200,
                                                   ftol=1e-12))
 
-  print(np.dot(res_mkt.x, bl_model_Sassets.Sigma @ res_mkt.x)**0.5 * 12**0.5 * 100)
-  print(res_mkt.fun**0.5 * 12**0.5 * 100)
-  print(sum(res_mkt.x))
-  print(res_mkt.x)
+  print(np.dot(resv_mkt.x, bl_model_Sassets.Sigma @ resv_mkt.x)**0.5 * 12**0.5 * 100)
+  print(resv_mkt.fun**0.5 * 12**0.5 * 100)
+  print(sum(resv_mkt.x))
+  print(resv_mkt.x)
   print('#####')
   args = (bl_model_Sassets.mu_bl,            
           bl_model_Sassets.Sigma,          
-          0.095/12)
-  res_bl = optimization.scipy_minimize("variance",
-                                     x0,
-                                     method_name='SLSQP',
-                                     args=args,
-                                     cons_sett=cons_sett,
-                                     options=dict(maxiter=200,
-                                                  ftol=1e-12))
+          0.10/12)
+  resv_bl = optimization.scipy_minimize("variance",
+                                        x0,
+                                        method_name='SLSQP',
+                                        args=args,
+                                        cons_sett=cons_sett,
+                                        options=dict(maxiter=200,
+                                                     ftol=1e-12))
 
-  print(np.dot(res_bl.x, bl_model_Sassets.Sigma @ res_bl.x)**0.5 * 12**0.5 * 100)
-  print(res_bl.fun**0.5 * 12**0.5 * 100)
-  print(sum(res_bl.x))
-  print(res_bl.x)
-
+  print(np.dot(resv_bl.x, bl_model_Sassets.Sigma @ resv_bl.x)**0.5 * 12**0.5 * 100)
+  print(resv_bl.fun**0.5 * 12**0.5 * 100)
+  print(sum(resv_bl.x))
+  print(resv_bl.x)
 
 #+end_src
 
-
 #+begin_src python :results none 
-    weights_sol_mkt = {k: res_mkt.x[i] for i, k in enumerate(asset_names)}
-    weights_sol_bl = {k: res_bl.x[i] for i, k in enumerate(asset_names)}
+    weights_sol_mkt = {k: resv_mkt.x[i] for i, k in enumerate(asset_names)}
+    weights_sol_bl = {k: resv_bl.x[i] for i, k in enumerate(asset_names)}
     #weights_sol = {k: w1_assets_opt[i] for i, k in enumerate(asset_names)}
     df_profits_sol_mkt = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_mkt)
     df_profits_sol_bl = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_bl)
@@ -1287,9 +1292,32 @@ By setting the portfolio variance as the optimization objective and adding as co
   fig1.write_image(fig1_path)
   fig1_path
 #+end_src
-
+#+CAPTION: Cumulative returns for variance optimization.   
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+NAME: P&L_plot_variance
 #+RESULTS: P&L_plot_variance
 [[file:img/P&L_plot_variance.png]]
+
+#+NAME: df_varianceopt_weights
+#+begin_src python  :results raw :exports results :tangle no
+  varianceopt_weights = {}
+  varianceopt_weights = {'w_naive': [1 / num_assets for i in range(num_assets)],
+                         'w_opt-BL': resv_bl.x,
+                         'w_opt-mkt': resv_mkt.x}
+  df_varianceopt_weights = pd.DataFrame(varianceopt_weights, index=asset_names).transpose()
+  tabulate(df_varianceopt_weights.round(decimals=2),
+           headers=df_varianceopt_weights.columns,
+           showindex=True, tablefmt='orgtbl')
+#+end_src
+#+NAME: df_varianceopt_weights
+#+CAPTION: Resulting portfolio weights of variance optimization
+#+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption
+#+RESULTS: df_varianceopt_weights
+|           |  JPM |  CVS | ATVI |   PH | WELL |  YUM |   KR |  ATO |  EQT |  DXC |
+|-----------+------+------+------+------+------+------+------+------+------+------|
+| w_naive   |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |
+| w_opt-BL  | 0.32 | 0.06 | 0.07 | 0.36 |   -0 |    0 | 0.08 |   -0 | 0.11 | 0.01 |
+| w_opt-mkt | 0.56 | 0.12 | 0.09 | 0.07 | 0.05 | 0.04 | 0.04 | 0.01 | 0.02 | 0.01 |
 
 **** Objective: Sharpe ratio
 #+NAME: Compute sharpe optimization
@@ -1304,7 +1332,7 @@ By setting the portfolio variance as the optimization objective and adding as co
                    ieq_weights0=dict(type="ineq")
                    )
 
-  res_mkt = optimization.scipy_minimize("sharpe",
+  resp_mkt = optimization.scipy_minimize("sharpe",
                                      x0,
                                      method_name='SLSQP',
                                      args=args,
@@ -1312,15 +1340,15 @@ By setting the portfolio variance as the optimization objective and adding as co
                                      options=dict(maxiter=200,
                                                   ftol=1e-12))
 
-  print(np.dot(res_mkt.x, bl_model_Sassets.Sigma @ res_mkt.x)**0.5 * 12**0.5 * 100)
-  print(res_mkt.fun)
-  print(sum(res_mkt.x))
-  print(res_mkt.x)
+  print(np.dot(resp_mkt.x, bl_model_Sassets.Sigma @ resp_mkt.x)**0.5 * 12**0.5 * 100)
+  print(resp_mkt.fun)
+  print(sum(resp_mkt.x))
+  print(resp_mkt.x)
   print('#####')
   args = (bl_model_Sassets.mu_bl,            
           bl_model_Sassets.Sigma,          
           0.)
-  res_bl = optimization.scipy_minimize("sharpe",
+  resp_bl = optimization.scipy_minimize("sharpe",
                                        x0,
                                        method_name='SLSQP',
                                        args=args,
@@ -1328,17 +1356,16 @@ By setting the portfolio variance as the optimization objective and adding as co
                                        options=dict(maxiter=200,
                                                     ftol=1e-12))
 
-  # print(np.dot(res_bl.x, bl_model_Sassets.Sigma @ res_bl.x)**0.5 * 12**0.5 * 100)
-  # print(res_bl.fun**0.5 * 12**0.5 * 100)
-  # print(sum(res_bl.x))
-  # print(res_bl.x)
-  print(np.dot(res_bl.x, bl_model_Sassets.Sigma @ res_bl.x)**0.5 * 12**0.5 * 100)
-  print(res_bl.fun)
-  print(sum(res_bl.x))
-  print(res_bl.x)
+  # print(np.dot(resp_bl.x, bl_model_Sassets.Sigma @ resp_bl.x)**0.5 * 12**0.5 * 100)
+  # print(resp_bl.fun**0.5 * 12**0.5 * 100)
+  # print(sum(resp_bl.x))
+  # print(resp_bl.x)
+  print(np.dot(resp_bl.x, bl_model_Sassets.Sigma @ resp_bl.x)**0.5 * 12**0.5 * 100)
+  print(resp_bl.fun)
+  print(sum(resp_bl.x))
+  print(resp_bl.x)
 
 #+end_src
-
 
 #+begin_src python :results none 
   weights_sol_mkt = {k: res_mkt.x[i] for i, k in enumerate(asset_names)}
@@ -1372,9 +1399,28 @@ By setting the portfolio variance as the optimization objective and adding as co
 #+RESULTS: P&L_plot_sharpe
 [[file:img/P&L_plot_sharpe.png]]
 
-*** Analysis and discussion
 
-- active risk (Table 6)
+#+NAME: df_sharpeopt_weights
+#+begin_src python  :results raw :exports results :tangle no
+  sharpeopt_weights = {}
+  sharpeopt_weights = {'w_naive': [1 / num_assets for i in range(num_assets)],
+                         'w_opt-BL': resp_bl.x,
+                         'w_opt-mkt': resp_mkt.x}
+  df_sharpeopt_weights = pd.DataFrame(sharpeopt_weights, index=asset_names).transpose()
+  tabulate(df_sharpeopt_weights.round(decimals=2),
+           headers=df_sharpeopt_weights.columns,
+           showindex=True, tablefmt='orgtbl')
+#+end_src
+#+NAME: df_sharpeopt_weights
+#+CAPTION: Resulting portfolio weights of Sharpe optimization
+#+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption
+#+RESULTS: df_sharpeopt_weights
+|           |  JPM |  CVS | ATVI |   PH | WELL |  YUM |   KR |  ATO |  EQT |  DXC |
+|-----------+------+------+------+------+------+------+------+------+------+------|
+| w_naive   |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |
+| w_opt-BL  | 0.26 |  0.1 | 0.07 | 0.26 | 0.03 | 0.04 | 0.13 |    0 |  0.1 | 0.01 |
+| w_opt-mkt | 0.54 | 0.12 | 0.09 | 0.07 | 0.05 | 0.05 | 0.04 | 0.02 | 0.02 | 0.01 |
+
 #+LaTeX: \appendix
 * ARIMA results summary
 <<sec:appx_arima>>
