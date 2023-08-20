@@ -816,7 +816,7 @@ $$
 
 ** Black-Litterman based portfolio
 :PROPERTIES:
-:header-args: :session py1 :tangle no :exports none
+:header-args: :session py1 :exports none :var name=(org-element-property :name  (org-element-context)) 
 :END:
 *** COMMENT Covariance treatment
 *** Prior and posterior returns construction
@@ -878,22 +878,7 @@ Covariance matrix of the excess returns is shown in Table [[df_Sigma_train]].
 | ATO  | 0.0006 | 0.0006 | 0.0008 | 0.0008 | 0.0011 | 0.0003 | 0.0005 | 0.0023 | 0.0009 | 0.0005 |
 | EQT  | 0.0011 | 0.0013 |  0.002 | 0.0029 | 0.0006 | 0.0018 | 0.0008 | 0.0009 | 0.0124 | 0.0034 |
 | DXC  | 0.0039 | 0.0018 | 0.0024 | 0.0044 | 0.0011 | 0.0027 | 0.0009 | 0.0005 | 0.0034 | 0.0141 |
-Next the market equilibrium returns are calculated from the market weights presented in Table [[df_portfolio_summary]]. 
-
-#+NAME: Compute equilibrium returns 
-#+begin_src python :results none 
-  f_mu = lambda l, S, w: l * S @ w
-  f_w = lambda l, Sinv, mu: 1/ l * Sinv @ mu
-  mu_mkt_assets = f_mu(config.lambda_mkt, Sigma_assets_train, w_mkt)
-  mu_mkt_4mfactors = f_mu(config.lambda_mkt, Sigma_4mfactors_train, w_mkt)
-  w1_assets_theoretical = optimization.mean_variance_opt(mu_mkt_assets, Sigmainv_assets_train, config.lambda_portfolio[0])
-  w2_assets_theoretical = optimization.mean_variance_opt(mu_mkt_assets, Sigmainv_assets_train, config.lambda_portfolio[1])
-  w3_assets_theoretical = optimization.mean_variance_opt(mu_mkt_assets, Sigmainv_assets_train, config.lambda_portfolio[2])
-  w1_4mfactors_theoretical = optimization.mean_variance_opt(mu_mkt_4mfactors, Sigmainv_4mfactors_train, config.lambda_portfolio[0])
-  w2_4mfactors_theoretical = optimization.mean_variance_opt(mu_mkt_4mfactors, Sigmainv_4mfactors_train, config.lambda_portfolio[1])
-  w3_4mfactors_theoretical = optimization.mean_variance_opt(mu_mkt_4mfactors, Sigmainv_4mfactors_train, config.lambda_portfolio[2])
-#+end_src
-
+Next the market equilibrium returns are calculated from the market weights presented in Table [[df_portfolio_summary]].
 #+NAME: Black-Litterman initialisation
 #+begin_src python :results none 
   bl_model_Sassets = bl.BlackLitterman(Sigma_assets_train, w_mkt,
@@ -916,6 +901,7 @@ Next the market equilibrium returns are calculated from the market weights prese
   df_returns_weights_eq = pd.DataFrame(returns_weights_eq,
                                        index=asset_names,)
 #+end_src
+#
 The implied equilibrium returns, Black-Litterman returns and their respective weights can be found in Table [[df_returns_weights_eq]]. The way the views affect the allocations is clear: 
 #+NAME: df_returns_weights_eq
 #+begin_src python  :results raw :exports results :tangle no
@@ -939,72 +925,50 @@ The implied equilibrium returns, Black-Litterman returns and their respective we
 | ATO  | 0.00135 | 0.00151 |       -0.00017 | -0.09014 | 0.02068 |     -0.11082 |
 | EQT  | 0.00721 |  0.0035 |        0.00371 |  0.12009 | 0.01941 |      0.10069 |
 | DXC  | 0.00835 | 0.00719 |        0.00116 |  0.00515 | 0.00515 |           -0 |
+|      |         |         |                |          |         |              |
 
-*** Portfolio weights optimisation
-
-#+NAME: Calculate Covariance of factors
-#+begin_src python :results none 
-
-  lmb_p = config.lambda_portfolio[1]
-  x0 = 1. / num_assets * np.ones(num_assets)
-  args = (bl_model_Sassets.mu_bl,            
-          bl_model_Sassets.Sigma,          
-          lmb_p)
-  res = optimization.scipy_minimize("mean_variance",
-                                    x0,
-                                    method_name='SLSQP',
-                                    args=args,
-                                    options=dict(maxiter=200,
-                                                 ftol=1e-12))
-  w1_assets_opt = res.x
-#+end_src
-
-#+NAME: Compute porfolio weights frontier
-#+begin_src python :results none 
-
-  lmb_p = config.lambda_portfolio[1]
-
-  x0 = 1. / num_assets * np.ones(num_assets)
-  args = (mu_mkt_assets*12,
-          Sigma_assets,
-          0.1)
-  args = (bl_model_Sassets.mu_mkt*12,            
-          bl_model_Sassets.Sigma,          
-          0.11)
-
-  cons_sett = dict(eq_rets=dict(type="eq"),
-                   eq_weights1=dict(type="eq"),
-                   ieq_weights0=dict(type="ineq")
-                   )
-  res1 = optimization.scipy_minimize("variance",
-                                     x0,
-                                     method_name='SLSQP',
-                                     args=args,
-                                     cons_sett=cons_sett,
-                                     options=dict(maxiter=200,
-                                                  ftol=1e-12))
-
-  print(np.dot(res1.x, Sigma_assets @ res1.x)**0.5 * 12**0.5 * 100)
-  print(res1.fun**0.5 * 12**0.5 * 100)
-  print(sum(res1.x))
-  print(res1.x)
-#+end_src
-
+*** Portfolio  optimisation
 #+NAME: Function to build portfolios weights
 #+begin_src python :results none 
+  def build_portfolio_weights(mu_targetlist: list,
+                              x0: np.array,
+                              mu_portfolio: np.array,
+                              Sigma_portfolio: np.array,
+                              cons_sett: dict,
+                              annualise:int =12) -> list:
+      """Builds an array of optimal portfolios
 
-  def build_portfolio_weights(mu_targetlist,
-                              x0,
-                              mu_portfolio,
-                              Sigma_portfolio,
-                              cons_sett,
-                              annualise=12):
+      Given a list of target returns, builds a variance minimization
+      with constraints on the target returns
+
+      Parameters
+      ----------
+      mu_targetlist : list
+          Array of target returns
+      x0 : np.array
+          initial optimization point
+      mu_portfolio : np.array
+          excess portfolio returns
+      Sigma_portfolio : np.array
+          Portfolio covariance
+      cons_sett : dict
+          Constraint inputs
+      annualise : int
+          period to annualise (12 if data on mu and Sigma were
+          calculated monthly)
+
+      Returns
+      -------
+      list
+          List of objects with optimization results
+
+      """
 
       res_list = list()
       for mu_i in mu_targetlist:
-          args = (mu_portfolio * annualise, # annualised
+          args = (mu_portfolio, #* annualise, # annualised
                   Sigma_portfolio,
-                  mu_i)
+                  mu_i / annualise)
           res = optimization.scipy_minimize("variance",
                                              x0,
                                              method_name='SLSQP',
@@ -1016,17 +980,43 @@ The implied equilibrium returns, Black-Litterman returns and their respective we
       return res_list
 
 #+end_src
-
 #+NAME: Function to compute weights vs volatility for target returns
 #+begin_src python :results none 
 
-  def build_df_weightsvol(assets,
-                          mu_targetlist,
-                          x0,
-                          lmb_p,
+  def build_df_weightsvol(assets: list,
+                          mu_targetlist: list,
+                          x0: np.array,
                           mu_portfolio,
                           Sigma_portfolio,
                           annualise=12):
+      """Builds an array of optimal portfolios
+
+      Given a list of target returns, builds a variance minimization
+      with constraints on the target returns
+
+      Parameters
+      ----------
+      assets : list
+          Array of assets composing the portfolio    
+      mu_targetlist : list
+          Array of target returns
+      x0 : np.array
+          initial optimization point
+      mu_portfolio : np.array
+          excess portfolio returns
+      Sigma_portfolio : np.array
+          Portfolio covariance
+      annualise : int
+          period to annualise (12 if data on mu and Sigma were
+          calculated monthly)
+
+      Returns
+      -------
+      pd.DataFrame
+          DataFrame relating portfolio weights and volatilities
+
+      """
+
 
       # constraints: returns equal to a number given in mu_targetlist,
       # weights equal to 1, and all weights greater than 0
@@ -1056,64 +1046,335 @@ The implied equilibrium returns, Black-Litterman returns and their respective we
                                           ))
       return df_weights_vols
 #+end_src
-
-#+NAME: df with portfolios weights
+**** Objective: Mean variance
+The first optimization performed is a mean-variance without constraints and since there is a close form solution, a comparison is made for verification of the optimization framework. 
+#+NAME: Compute equilibrium returns 
 #+begin_src python :results none 
-
-  lmb_p = config.lambda_portfolio[2]
-  x0 = 1. / num_assets * np.ones(num_assets)
-  mu_targetlist = np.linspace(4,18,16) * 1e-2
-  df_weights_vols = build_df_weightsvol(asset_names, mu_targetlist, x0, lmb_p,
-                                        mu_mkt_assets,
-                                        Sigma_assets)
+  f_mu = lambda l, S, w: l * S @ w
+  f_w = lambda l, Sinv, mu: 1/ l * Sinv @ mu
+  mu_mkt_assets = f_mu(config.lambda_mkt, Sigma_assets_train, w_mkt)
+  w1_mkt_theoretical = optimization.mean_variance_opt(mu_mkt_assets, Sigmainv_assets_train, config.lambda_portfolio[0])
+  w2_mkt_theoretical = optimization.mean_variance_opt(mu_mkt_assets, Sigmainv_assets_train, config.lambda_portfolio[1])
+  w3_mkt_theoretical = optimization.mean_variance_opt(mu_mkt_assets, Sigmainv_assets_train, config.lambda_portfolio[2])
+  w1_bl_theoretical = optimization.mean_variance_opt(bl_model_Sassets.mu_bl, Sigmainv_assets_train, config.lambda_portfolio[0])
+  w2_bl_theoretical = optimization.mean_variance_opt(bl_model_Sassets.mu_bl, Sigmainv_assets_train, config.lambda_portfolio[1])
+  w3_bl_theoretical = optimization.mean_variance_opt(bl_model_Sassets.mu_bl, Sigmainv_assets_train, config.lambda_portfolio[2])
 
 #+end_src
 
-#+NAME: Weights_Composition
+#+NAME: Calculate mean variance optimization
+#+begin_src python :results none 
+  res_portfolios_bl = []
+  res_portfolios_mkt = []
+  for lmb_p in config.lambda_portfolio:
+      x0 = 1. / num_assets * np.ones(num_assets)
+      args = (bl_model_Sassets.mu_bl,            
+              bl_model_Sassets.Sigma,          
+              lmb_p)
+      res = optimization.scipy_minimize("mean_variance",
+                                        x0,
+                                        method_name='SLSQP',
+                                        args=args,
+                                        options=dict(maxiter=200,
+                                                     ftol=1e-12))
+      res_portfolios_bl.append(res)
+      args = (bl_model_Sassets.mu_mkt,            
+              bl_model_Sassets.Sigma,          
+              lmb_p)
+      res = optimization.scipy_minimize("mean_variance",
+                                        x0,
+                                        method_name='SLSQP',
+                                        args=args,
+                                        options=dict(maxiter=200,
+                                                     ftol=1e-12))
+      res_portfolios_mkt.append(res)
+    
+  #res1 = res_portfolios_bl[2]  
+#+end_src
+
+#+NAME: df_meanvariance_weights
+#+begin_src python  :results raw :exports results :tangle no
+  meanvariance_weights = {}
+  meanvariance_weights['w1_{mkt-opt}'] = res_portfolios_mkt[0].x
+  meanvariance_weights['w1_{mkt-theo}'] = w1_mkt_theoretical
+  meanvariance_weights['w2_{mkt-opt}'] = res_portfolios_mkt[1].x
+  meanvariance_weights['w2_{mkt-theo}'] = w2_mkt_theoretical
+  meanvariance_weights['w3_{mkt-opt}'] = res_portfolios_mkt[2].x
+  meanvariance_weights['w3_{mkt-theo}'] = w3_mkt_theoretical
+  meanvariance_weights['w1_{bl-opt}'] = res_portfolios_bl[0].x
+  meanvariance_weights['w1_{bl-theo}'] = w1_bl_theoretical
+  meanvariance_weights['w2_{bl-opt}'] = res_portfolios_bl[1].x
+  meanvariance_weights['w2_{bl-theo}'] = w2_bl_theoretical
+  meanvariance_weights['w3_{bl-opt}'] = res_portfolios_bl[2].x
+  meanvariance_weights['w3_{bl-theo}'] = w3_bl_theoretical
+  df_meanvariance_weights = pd.DataFrame(meanvariance_weights,
+                                         index=asset_names).transpose()
+  tabulate(df_meanvariance_weights.round(decimals=4),
+           headers=df_meanvariance_weights.columns,
+           showindex=True, tablefmt='orgtbl')
+#+end_src
+#+NAME: df_meanvariance_weights
+#+CAPTION: Mean variance optimization weights
+#+ATTR_LATEX: :width 1\textwidth :environment longtable :caption
+#+RESULTS: df_meanvariance_weights
+|               |     JPM |    CVS |   ATVI |     PH |   WELL |    YUM |     KR |     ATO |    EQT |    DXC |
+|---------------+---------+--------+--------+--------+--------+--------+--------+---------+--------+--------|
+| w1_{mkt}(opt) | 12.1949 | 2.6095 | 1.9614 | 1.4779 | 1.1595 | 1.0187 |  0.965 |  0.4632 | 0.4347 | 0.1155 |
+| w1_mkt_theo   | 12.1949 | 2.6096 | 1.9615 | 1.4782 | 1.1591 | 1.0186 | 0.9647 |  0.4632 | 0.4347 | 0.1155 |
+| w2_mkt_opt    |  0.5444 | 0.1165 | 0.0876 |  0.066 | 0.0517 | 0.0455 | 0.0431 |  0.0207 | 0.0194 | 0.0052 |
+| w2_mkt_theo   |  0.5444 | 0.1165 | 0.0876 |  0.066 | 0.0517 | 0.0455 | 0.0431 |  0.0207 | 0.0194 | 0.0052 |
+| w3_mkt_opt    |  0.2032 | 0.0435 | 0.0327 | 0.0246 | 0.0193 |  0.017 | 0.0161 |  0.0077 | 0.0072 | 0.0019 |
+| w3_mkt_theo   |  0.2032 | 0.0435 | 0.0327 | 0.0246 | 0.0193 |  0.017 | 0.0161 |  0.0077 | 0.0072 | 0.0019 |
+| w1_bl_opt     |  6.7948 | 2.6097 | 1.9615 | 6.8783 | 1.1591 | 1.0185 | 3.4471 | -2.0191 |   2.69 | 0.1155 |
+| w1_bl_theo    |  6.7949 | 2.6096 | 1.9615 | 6.8782 | 1.1591 | 1.0186 |  3.447 | -2.0191 | 2.6901 | 0.1155 |
+| w2_bl_opt     |  0.3033 | 0.1165 | 0.0876 | 0.3071 | 0.0518 | 0.0455 | 0.1539 | -0.0901 | 0.1201 | 0.0052 |
+| w2_bl_theo    |  0.3033 | 0.1165 | 0.0876 | 0.3071 | 0.0517 | 0.0455 | 0.1539 | -0.0901 | 0.1201 | 0.0052 |
+| w3_bl_opt     |  0.1132 | 0.0435 | 0.0327 | 0.1146 | 0.0193 |  0.017 | 0.0574 | -0.0337 | 0.0448 | 0.0019 |
+| w3_bl_theo    |  0.1132 | 0.0435 | 0.0327 | 0.1146 | 0.0193 |  0.017 | 0.0574 | -0.0337 | 0.0448 | 0.0019 |
+
+#+begin_src python :results none 
+  weights_sol_mkt = {k: res_portfolios_mkt[1].x[i] for i, k in enumerate(asset_names)}
+  weights_sol_bl = {k: res_portfolios_bl[1].x[i] for i, k in enumerate(asset_names)}
+  #weights_sol = {k: w1_assets_opt[i] for i, k in enumerate(asset_names)}
+  df_profits_sol_mkt = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_mkt)
+  df_profits_sol_bl = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_bl)
+  weights_naive = {k: x0[i] for i, k in enumerate(asset_names)}  
+  df_profits_naive = ml4qf.utils.profit_portfolio(df_assets_test, weights_naive)
+  df_rf = ml4qf.utils.profit_portfolio(df_factors_test[['RF']], {'RF':(sum(res1.x)-1)})
+  df_profits_meanvariance = pd.DataFrame(np.array([
+      np.hstack([1,df_profits_sol_bl.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
+      np.hstack([1,df_profits_sol_mkt.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
+      np.hstack([1,df_profits_naive.sum(axis=1).to_numpy()])]).T,
+                                     columns=['Opt-BL', 'Opt-mkt', 'Naive'],
+                                     index=df_profits_sol.index.insert(
+                                         0,df_assets_train.index[-1]))
+
+#+end_src
+
+#+NAME: P&L_plot_meanvariance
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
-  fig1 = px.area(df_weights_vols, x="vols", y="weights", color="assets",
+  fig1 = px.line(df_profits_meanvariance,
+                 y=['Opt-BL', 'Opt-mkt', 'Naive'],
+                 labels={'value':'Comulative returns'},
+                 markers=True)
+  fig1.write_image(fig1_path)
+  fig1_path
+#+end_src
+
+#+RESULTS: P&L_plot_meanvariance
+[[file:img/P&L_plot_meanvariance.png]]
+
+**** Objective: variance with constraints
+By setting the portfolio variance as the optimization objective and adding as constraints a target return and 
+#+NAME: df for variance weights composition
+#+begin_src python :results none 
+  # df for variance weights composition
+  lmb_p = config.lambda_portfolio[2]
+  x0 = 1. / num_assets * np.ones(num_assets)
+  mu_targetlist = np.linspace(4,18,16) * 1e-2
+  df_weightsvols_bl = build_df_weightsvol(asset_names, mu_targetlist, x0,
+                                        bl_model_Sassets.mu_bl,
+                                        bl_model_Sassets.Sigma)
+  df_weightsvols_mkt = build_df_weightsvol(asset_names, mu_targetlist, x0,
+                                        bl_model_Sassets.mu_mkt,
+                                        bl_model_Sassets.Sigma)
+
+#+end_src
+
+#+NAME: Weights_Composition_mkt
+#+begin_src python :results value file  :exports results :var name=(org-element-property :name  (org-element-context)) 
+  fig1_path= img_dir / f'{name}.png'
+  fig1 = px.area(df_weightsvols_mkt, x="vols", y="weights", color="assets",
                 #pattern_shape_sequence=[".", "x", "+"],              
                 pattern_shape="assets"
                 )
   fig1.write_image(fig1_path)
   fig1_path
 #+end_src
+#+NAME: Weights_Composition_mkt
+#+CAPTION:  Backtesting factor approaximation on Google asset
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: Weights_Composition_mkt
+[[file:img/Weights_Composition_mkt.png]]
 
-#+RESULTS: Weights_Composition
-[[file:img/Weights_Composition.png]]
+#+NAME: Weights_Composition_bl
+#+begin_src python :results value file  :exports results :var name=(org-element-property :name  (org-element-context)) 
+  fig1_path= img_dir / f'{name}.png'
+  fig1 = px.area(df_weightsvols_bl, x="vols", y="weights", color="assets",
+                #pattern_shape_sequence=[".", "x", "+"],              
+                pattern_shape="assets"
+                )
+  fig1.write_image(fig1_path)
+  fig1_path
+#+end_src
+#+NAME: Weights_Composition_bl
+#+CAPTION:  Backtesting factor approaximation on Google asset
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: Weights_Composition_bl
+[[file:img/Weights_Composition_bl.png]]
+
+#+NAME: Compute variance optimization
+#+begin_src python :results none 
+
+  x0 = 1. / num_assets * np.ones(num_assets)
+  args = (bl_model_Sassets.mu_mkt,            
+          bl_model_Sassets.Sigma,          
+          0.095/12)
+
+  cons_sett = dict(eq_rets=dict(type="eq"),
+                   eq_weights1=dict(type="eq"),
+                   ieq_weights0=dict(type="ineq")
+                   )
+  res_mkt = optimization.scipy_minimize("variance",
+                                     x0,
+                                     method_name='SLSQP',
+                                     args=args,
+                                     cons_sett=cons_sett,
+                                     options=dict(maxiter=200,
+                                                  ftol=1e-12))
+
+  print(np.dot(res_mkt.x, bl_model_Sassets.Sigma @ res_mkt.x)**0.5 * 12**0.5 * 100)
+  print(res_mkt.fun**0.5 * 12**0.5 * 100)
+  print(sum(res_mkt.x))
+  print(res_mkt.x)
+  print('#####')
+  args = (bl_model_Sassets.mu_bl,            
+          bl_model_Sassets.Sigma,          
+          0.095/12)
+  res_bl = optimization.scipy_minimize("variance",
+                                     x0,
+                                     method_name='SLSQP',
+                                     args=args,
+                                     cons_sett=cons_sett,
+                                     options=dict(maxiter=200,
+                                                  ftol=1e-12))
+
+  print(np.dot(res_bl.x, bl_model_Sassets.Sigma @ res_bl.x)**0.5 * 12**0.5 * 100)
+  print(res_bl.fun**0.5 * 12**0.5 * 100)
+  print(sum(res_bl.x))
+  print(res_bl.x)
+
+
+#+end_src
 
 
 #+begin_src python :results none 
-  weights_sol = {k: res1.x[i] for i, k in enumerate(asset_names)}
-  #weights_sol = {k: w1_assets_opt[i] for i, k in enumerate(asset_names)}
-  df_profits_sol = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol)
-  weights_naive = {k: x0[i] for i, k in enumerate(asset_names)}  
-  df_profits_naive = ml4qf.utils.profit_portfolio(df_assets_test, weights_naive)
-
-  df_profits = pd.DataFrame(np.array([
-      #df_profits_sol.sum(axis=1).to_numpy()-df_factors_test.RF * (sum(w1_assets_opt)-1),
-      df_profits_sol.sum(axis=1).to_numpy(),
-      df_profits_naive.sum(axis=1).to_numpy()]).T,
-                            columns=['Opt', 'Naive'], index=df_profits_sol.index)
+    weights_sol_mkt = {k: res_mkt.x[i] for i, k in enumerate(asset_names)}
+    weights_sol_bl = {k: res_bl.x[i] for i, k in enumerate(asset_names)}
+    #weights_sol = {k: w1_assets_opt[i] for i, k in enumerate(asset_names)}
+    df_profits_sol_mkt = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_mkt)
+    df_profits_sol_bl = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_bl)
+    weights_naive = {k: x0[i] for i, k in enumerate(asset_names)}  
+    df_profits_naive = ml4qf.utils.profit_portfolio(df_assets_test, weights_naive)
+    df_rf = ml4qf.utils.profit_portfolio(df_factors_test[['RF']], {'RF':(sum(res1.x)-1)})
+    df_profits_variance = pd.DataFrame(np.array([
+        np.hstack([1,df_profits_sol_bl.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
+        np.hstack([1,df_profits_sol_mkt.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
+        np.hstack([1,df_profits_naive.sum(axis=1).to_numpy()])]).T,
+                              columns=['Opt-BL', 'Opt-mkt', 'Naive'],
+                                       index=df_profits_sol.index.insert(
+                                           0,df_assets_train.index[-1]))
 #+end_src
 
-#+NAME: P&L_plot
+#+NAME: P&L_plot_variance
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
-  fig1 = px.line(df_profits, y=['Opt', 'Naive'], markers=True)
+  fig1 = px.line(df_profits_variance,
+                 y=['Opt-BL', 'Opt-mkt', 'Naive'],
+                 labels={'value':'Comulative returns'},
+                 markers=True)
   fig1.write_image(fig1_path)
   fig1_path
 #+end_src
 
-#+RESULTS: P&L_plot
-[[file:img/P&L_plot.png]]
+#+RESULTS: P&L_plot_variance
+[[file:img/P&L_plot_variance.png]]
+
+**** Objective: Sharpe ratio
+#+NAME: Compute sharpe optimization
+#+begin_src python :results none 
+
+  x0 = 1. / num_assets * np.ones(num_assets)
+  args = (bl_model_Sassets.mu_mkt,            
+          bl_model_Sassets.Sigma,          
+          0.)
+
+  cons_sett = dict(eq_weights1=dict(type="eq"),
+                   ieq_weights0=dict(type="ineq")
+                   )
+
+  res_mkt = optimization.scipy_minimize("sharpe",
+                                     x0,
+                                     method_name='SLSQP',
+                                     args=args,
+                                     cons_sett=cons_sett,
+                                     options=dict(maxiter=200,
+                                                  ftol=1e-12))
+
+  print(np.dot(res_mkt.x, bl_model_Sassets.Sigma @ res_mkt.x)**0.5 * 12**0.5 * 100)
+  print(res_mkt.fun)
+  print(sum(res_mkt.x))
+  print(res_mkt.x)
+  print('#####')
+  args = (bl_model_Sassets.mu_bl,            
+          bl_model_Sassets.Sigma,          
+          0.)
+  res_bl = optimization.scipy_minimize("sharpe",
+                                       x0,
+                                       method_name='SLSQP',
+                                       args=args,
+                                       cons_sett=cons_sett,
+                                       options=dict(maxiter=200,
+                                                    ftol=1e-12))
+
+  # print(np.dot(res_bl.x, bl_model_Sassets.Sigma @ res_bl.x)**0.5 * 12**0.5 * 100)
+  # print(res_bl.fun**0.5 * 12**0.5 * 100)
+  # print(sum(res_bl.x))
+  # print(res_bl.x)
+  print(np.dot(res_bl.x, bl_model_Sassets.Sigma @ res_bl.x)**0.5 * 12**0.5 * 100)
+  print(res_bl.fun)
+  print(sum(res_bl.x))
+  print(res_bl.x)
+
+#+end_src
+
+
+#+begin_src python :results none 
+  weights_sol_mkt = {k: res_mkt.x[i] for i, k in enumerate(asset_names)}
+  weights_sol_bl = {k: res_bl.x[i] for i, k in enumerate(asset_names)}
+  #weights_sol = {k: w1_assets_opt[i] for i, k in enumerate(asset_names)}
+  df_profits_sol_mkt = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_mkt)
+  df_profits_sol_bl = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_bl)
+  weights_naive = {k: x0[i] for i, k in enumerate(asset_names)}  
+  df_profits_naive = ml4qf.utils.profit_portfolio(df_assets_test, weights_naive)
+  df_rf = ml4qf.utils.profit_portfolio(df_factors_test[['RF']], {'RF':(sum(res1.x)-1)})
+  df_profits_sharpe = pd.DataFrame(np.array([
+      np.hstack([1,df_profits_sol_bl.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
+      np.hstack([1,df_profits_sol_mkt.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
+      np.hstack([1,df_profits_naive.sum(axis=1).to_numpy()])]).T,
+                            columns=['Opt-BL', 'Opt-mkt', 'Naive'],
+                                     index=df_profits_sol.index.insert(
+                                         0,df_assets_train.index[-1]))
+#+end_src
+
+#+NAME: P&L_plot_sharpe
+#+begin_src python :results value file  :exports results :var name=(org-element-property :name  (org-element-context)) 
+  fig1_path= img_dir / f'{name}.png'
+  fig1 = px.line(df_profits_sharpe,
+                 y=['Opt-BL', 'Opt-mkt', 'Naive'],
+                 labels={'value':'Comulative returns'},
+                 markers=True)
+  fig1.write_image(fig1_path)
+  fig1_path
+#+end_src
+
+#+RESULTS: P&L_plot_sharpe
+[[file:img/P&L_plot_sharpe.png]]
 
 *** Analysis and discussion
 
 - active risk (Table 6)
-*** Performance comparison
-
 #+LaTeX: \appendix
 * ARIMA results summary
 <<sec:appx_arima>>

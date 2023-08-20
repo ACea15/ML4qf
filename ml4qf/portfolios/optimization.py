@@ -30,7 +30,7 @@ class MinimizeFuns:
         mu, Sigma, risk_free, *xargs = args
         portfolio_mean_return = np.dot(mu, x)        
         portfolio_variance = np.dot(x, Sigma @ x)
-        sharpe_ratio = ((portfolio_mean_return - risk_free) /
+        sharpe_ratio = ((-portfolio_mean_return + risk_free) /
                         np.sqrt(portfolio_variance))
         return sharpe_ratio
 
@@ -78,7 +78,3 @@ def scipy_minimize(fun_name: str,
                                   constraints=constraints,
                                   **kwargs)
     return res
-
-    
-
-    
