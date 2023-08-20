@@ -63,19 +63,21 @@
 * Introduction
 
 ** Specifications:
-For risk-free rate, 3M US Treasury from pandas FRED dataset/ECB website
-rates for EUR/some small constant rate/zero rate – all are acceptable.
-Use 2-3 year sample, which means > 500 daily returns.
-** Index selection
-The S&P 500 is considered a better reflection of the market’s performance across all sectors compared to the Nasdaq Composite and the Dow
-
+From a high level view these were the requirements in the assignment, all of which have been completed:
+- Pick a portfolio of assets that yields good diversification.
+- Collect a good range of factors, compute alphas and betas for each of the assets and backtesting the resulting factor model.
+- Implement Black-Litterman portfolio model for the posterior returns and covariance.
+- Generate absolute and relative views for the portfolio from historical data.
+- Compute at least two types of optimisation using the posterior information from the Black-Litterman model and with three levels of risk aversion.
+- Assessment of the implications and effects of incorporating the views into the portfolio optimisation. 
+- Compare performance of constructed portfolios to the market and backtesting.  
 ** Implemented computational tools and external libraries
-The various tasks have been implemented in Python which are summarised as:
+In order to fulfil the specifications laid above, a range of tools have been implemented in Python which are summarised as:
 - Functionality to automatically retrieve data from YahooFinance, select a diversified porfolio, create features such as returns, volatilities, moving averages etc.
-- Similarly a front-end to get factors and risk-free rate data and construct a factor model via Ordinary Least squares.
-- A wrapper for the creation of an ARIMA  model and hyperparameter search of the underlying model  parameters.
+- Similarly, a front-end to get factors and risk-free rate data and construct a factor model via Ordinary Least squares (OLS).
+- A wrapper for the creation of an ARIMA  model and hyperparameter search of the underlying model  parameters. A forecasting capability based of this statistical to estimate short-term future returns and from those extract meaningful views into the assets performance.
 - A portfolio optimization framework with constraints and leveraging Scipy optimization engine.
-- Black-Litterman portfolio approach to introduce the asset's manager views.
+- A model of Black-Litterman portfolio approach to introduce the asset's manager views.
 - A set of utilities to ...
 - A testing framework to validate the codes, including the OLS for factors model building, the Black-Litterman implementation and the portfolio optimization. 
 Outside the general-purpose Python ecosystem (numpy, pandas, etc.), the following libraries have been employed  to complete this work:
@@ -174,15 +176,16 @@ The analysis is divided in three major sections: a portfolio selection of 10 ass
 :END:
 There are many approaches for picking a basket of assets and herein the adoption is a simple yet general and automatic strategy that guarantees diversification. The companies gathered are first presented together with their performance and correlations, then the factor analysis on these companies is shown.  
 *** Asset selection
-The selection of assets have followed a random and automatic generation of ten tickers from the S&P 500 with these constraints: no two assets could belong to the same sector; 1 company is chosen among the top 5% in terms of market cap, 2 among the next 20%, 4 among the next 50%, 2 in the following 20% and the final one picked among the 5% smallest; the correlation among assets should also be kept small. 
+The S&P 500 is considered a better reflection of the market’s performance across all sectors compared to the Nasdaq Composite and the Down, therefore ten assets from this index are chosen using a tailored approach to attain a good diversified basket.  
+The selection is based on a random and automatic generation of the tickers with these constraints: no two assets could belong to the same sector; 1 company is chosen among the top 5% in terms of market cap, 2 among the next 20%, 4 among the next 50%, 2 in the following 20% and the final one picked among the 5% smallest; the correlation among assets should also be kept small. 
 #+NAME: Load index SP500
 #+begin_src python :results none
   # Load index SP500
-  sp500 = financial_features.FinancialData("^GSPC",
-                                           config.start_date_assets,
-                                           config.end_date_assets,
-                                           DATA_FOLDER="./data")
-  df_sp500 = sp500.df[['returns']].dropna()
+  # sp500 = financial_features.FinancialData("^GSPC",
+  #                                          config.start_date_assets,
+  #                                          config.end_date_assets,
+  #                                          DATA_FOLDER="./data")
+  # df_sp500 = sp500.df[['returns']].dropna()
 #+end_src
 
 #+NAME: Load portfolio and calculate market weights
@@ -221,10 +224,19 @@ The selection of assets have followed a random and automatic generation of ten t
   df_assets_train, df_assets_test = ml4qf.utils.split_df_date(
       df_assets,
       split_index=config.split_data_idx)
+  sp500x = financial_features.FinancialDataContainer(["^GSPC"],
+                                                  config.start_date_assets,
+                                                  config.end_date_assets,
+                                                  '1mo',
+                                                  './data')
+  df_sp500 = sp500x.df.dropna()
+  df_sp500_train, df_sp500_test = ml4qf.utils.split_df_date(
+      df_sp500,
+      split_index=config.split_data_idx)
   asset_names = list(df_assets.columns)
 
 #+end_src
-The resulting basket is shown in Table  [[df_portfolio_summary]].
+The resulting portfolio is shown in Table  [[df_portfolio_summary]].
 #+NAME: Compute and show Data Frame, df_portfolio_summary
 #+begin_src python :results raw :exports results :tangle no
   # Compute Data Frame df_portfolio_summary
@@ -255,7 +267,7 @@ The resulting basket is shown in Table  [[df_portfolio_summary]].
 | ATO  | 1.69743e+10 |     0.0206769 | Utilities              |
 | EQT  | 1.59304e+10 |     0.0194052 | Energy                 |
 | DXC  | 4.23124e+09 |    0.00515418 | Technology             |
-
+JP Morgan is the flagship of the porfolio and DXC Technology sits at the bottom of the portfolio in terms of size. 
 *** Assets exploratory analysis
 Monthly returns are used for the analysis as a better metric for a portfolio that is not going to be rebalanced for long periods of time. A period of over 20 years is taken for both the analysis and the backtesting as to make sure a reasonable amount of data is utilised in the study. Table [[df_assets]] 
 #+NAME: df_assets
@@ -1135,21 +1147,26 @@ The first optimization performed is a mean-variance without constraints and sinc
 | w3_{bl-opt}   |  0.1132 | 0.0435 | 0.0327 | 0.1146 | 0.0193 |  0.017 | 0.0574 | -0.0337 | 0.0448 | 0.0019 |
 | w3_{bl-theo}  |  0.1132 | 0.0435 | 0.0327 | 0.1146 | 0.0193 |  0.017 | 0.0574 | -0.0337 | 0.0448 | 0.0019 |
 
-For backtesting the performance of the cumulative returns 
+For backtesting the performance of the computed portfolios, the cumulative returns are compared on the testing data against the Naive porfolio with constant weights of 0.1 across the 10 assets. Although both optimised portfolios perform better than the Naive one, the results in Fig. [[P&L_plot_meanvariance]] remark the importance of the addition on the views to keep a positive trend in the returns when there is perhaps a period of less growth.
 #+begin_src python :results none 
   weights_sol_mkt = {k: res_portfolios_mkt[1].x[i] for i, k in enumerate(asset_names)}
   weights_sol_bl = {k: res_portfolios_bl[1].x[i] for i, k in enumerate(asset_names)}
   #weights_sol = {k: w1_assets_opt[i] for i, k in enumerate(asset_names)}
   df_profits_sol_mkt = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_mkt)
   df_profits_sol_bl = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_bl)
-  weights_naive = {k: x0[i] for i, k in enumerate(asset_names)}  
+  weights_naive = {k: x0[i] for i, k in enumerate(asset_names)}
   df_profits_naive = ml4qf.utils.profit_portfolio(df_assets_test, weights_naive)
+  weights_sp500 = {'GSPC': 1.}
+  df_profits_sp500 = ml4qf.utils.profit_portfolio(df_sp500_test, weights_sp500)
+
   df_rf = ml4qf.utils.profit_portfolio(df_factors_test[['RF']], {'RF':(sum(res1.x)-1)})
   df_profits_meanvariance = pd.DataFrame(np.array([
       np.hstack([1,df_profits_sol_bl.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
       np.hstack([1,df_profits_sol_mkt.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
-      np.hstack([1,df_profits_naive.sum(axis=1).to_numpy()])]).T,
-                                     columns=['Opt-BL', 'Opt-mkt', 'Naive'],
+      np.hstack([1,df_profits_naive.sum(axis=1).to_numpy()]),
+      np.hstack([1,df_profits_sp500.sum(axis=1).to_numpy()])
+  ]).T,
+                                     columns=['Opt-BL', 'Opt-mkt', 'Naive', 'SP500'],
                                      index=df_profits_sol.index.insert(
                                          0,df_assets_train.index[-1]))
 
@@ -1159,14 +1176,14 @@ For backtesting the performance of the cumulative returns
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
   fig1 = px.line(df_profits_meanvariance,
-                 y=['Opt-BL', 'Opt-mkt', 'Naive'],
+                 y=['Opt-BL', 'Opt-mkt', 'Naive', 'SP500'],
                  labels={'value':'Comulative returns'},
                  markers=True)
   fig1.write_image(fig1_path)
   fig1_path
 #+end_src
 #+NAME: P&L_plot_meanvariance
-#+CAPTION: Mean variance optimization weights
+#+CAPTION: Cumulative returns for mean-variance optimization.
 #+ATTR_LATEX: :width 1\textwidth :environment longtable :caption
 #+RESULTS: P&L_plot_meanvariance
 [[file:img/P&L_plot_meanvariance.png]]
@@ -1265,28 +1282,34 @@ Next the P&L of the variance optimisation is calculated for a target return of 1
 #+end_src
 
 #+begin_src python :results none 
-    weights_sol_mkt = {k: resv_mkt.x[i] for i, k in enumerate(asset_names)}
-    weights_sol_bl = {k: resv_bl.x[i] for i, k in enumerate(asset_names)}
-    #weights_sol = {k: w1_assets_opt[i] for i, k in enumerate(asset_names)}
-    df_profits_sol_mkt = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_mkt)
-    df_profits_sol_bl = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_bl)
-    weights_naive = {k: x0[i] for i, k in enumerate(asset_names)}  
-    df_profits_naive = ml4qf.utils.profit_portfolio(df_assets_test, weights_naive)
-    df_rf = ml4qf.utils.profit_portfolio(df_factors_test[['RF']], {'RF':(sum(res1.x)-1)})
-    df_profits_variance = pd.DataFrame(np.array([
-        np.hstack([1,df_profits_sol_bl.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
-        np.hstack([1,df_profits_sol_mkt.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
-        np.hstack([1,df_profits_naive.sum(axis=1).to_numpy()])]).T,
-                              columns=['Opt-BL', 'Opt-mkt', 'Naive'],
-                                       index=df_profits_sol.index.insert(
-                                           0,df_assets_train.index[-1]))
+  weights_sol_mkt = {k: resv_mkt.x[i] for i, k in enumerate(asset_names)}
+  weights_sol_bl = {k: resv_bl.x[i] for i, k in enumerate(asset_names)}
+  #weights_sol = {k: w1_assets_opt[i] for i, k in enumerate(asset_names)}
+  df_profits_sol_mkt = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_mkt)
+  df_profits_sol_bl = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_bl)
+  weights_naive = {k: x0[i] for i, k in enumerate(asset_names)}  
+  df_profits_naive = ml4qf.utils.profit_portfolio(df_assets_test, weights_naive)
+  weights_sp500 = {'GSPC': 1.}
+  df_profits_sp500 = ml4qf.utils.profit_portfolio(df_sp500_test, weights_sp500)
+
+  df_rf = ml4qf.utils.profit_portfolio(df_factors_test[['RF']], {'RF':(sum(res1.x)-1)})
+  df_profits_variance = pd.DataFrame(np.array([
+      np.hstack([1,df_profits_sol_bl.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
+      np.hstack([1,df_profits_sol_mkt.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
+      np.hstack([1,df_profits_naive.sum(axis=1).to_numpy()]),
+      np.hstack([1,df_profits_sp500.sum(axis=1).to_numpy()])
+  ]).T,
+                                     columns=['Opt-BL', 'Opt-mkt', 'Naive', 'SP500'],
+                                     index=df_profits_sol.index.insert(
+                                         0,df_assets_train.index[-1]))
+  
 #+end_src
 
 #+NAME: P&L_plot_variance
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
   fig1 = px.line(df_profits_variance,
-                 y=['Opt-BL', 'Opt-mkt', 'Naive'],
+                 y=['Opt-BL', 'Opt-mkt', 'Naive', 'SP500'],
                  labels={'value':'Comulative returns'},
                  markers=True)
   fig1.write_image(fig1_path)
@@ -1375,30 +1398,37 @@ Next the P&L of the variance optimisation is calculated for a target return of 1
   df_profits_sol_bl = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_bl)
   weights_naive = {k: x0[i] for i, k in enumerate(asset_names)}  
   df_profits_naive = ml4qf.utils.profit_portfolio(df_assets_test, weights_naive)
+  weights_sp500 = {'GSPC': 1.}
+  df_profits_sp500 = ml4qf.utils.profit_portfolio(df_sp500_test, weights_sp500)
+
   df_rf = ml4qf.utils.profit_portfolio(df_factors_test[['RF']], {'RF':(sum(res1.x)-1)})
   df_profits_sharpe = pd.DataFrame(np.array([
       np.hstack([1,df_profits_sol_bl.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
       np.hstack([1,df_profits_sol_mkt.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
-      np.hstack([1,df_profits_naive.sum(axis=1).to_numpy()])]).T,
-                            columns=['Opt-BL', 'Opt-mkt', 'Naive'],
+      np.hstack([1,df_profits_naive.sum(axis=1).to_numpy()]),
+      np.hstack([1,df_profits_sp500.sum(axis=1).to_numpy()])
+  ]).T,
+                                     columns=['Opt-BL', 'Opt-mkt', 'Naive', 'SP500'],
                                      index=df_profits_sol.index.insert(
                                          0,df_assets_train.index[-1]))
+  
 #+end_src
 
 #+NAME: P&L_plot_sharpe
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
   fig1 = px.line(df_profits_sharpe,
-                 y=['Opt-BL', 'Opt-mkt', 'Naive'],
+                 y=['Opt-BL', 'Opt-mkt', 'Naive', 'SP500'],
                  labels={'value':'Comulative returns'},
                  markers=True)
   fig1.write_image(fig1_path)
   fig1_path
 #+end_src
-
+#+CAPTION: Cumulative returns for Sharpe optimization.   
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+NAME: P&L_plot_sharpe
 #+RESULTS: P&L_plot_sharpe
 [[file:img/P&L_plot_sharpe.png]]
-
 
 #+NAME: df_sharpeopt_weights
 #+begin_src python  :results raw :exports results :tangle no
