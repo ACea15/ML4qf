@@ -61,6 +61,7 @@
 #+end_src
 
 * Introduction
+
 ** Specifications:
 For risk-free rate, 3M US Treasury from pandas FRED dataset/ECB website
 rates for EUR/some small constant rate/zero rate – all are acceptable.
@@ -68,21 +69,21 @@ Use 2-3 year sample, which means > 500 daily returns.
 ** Index selection
 The S&P 500 is considered a better reflection of the market’s performance across all sectors compared to the Nasdaq Composite and the Dow
 
-#+begin_comment
-#+CAPTION: Modal shape 1 
-#+ATTR_LATEX: :width 0.75\textwidth
-#+ATTR_ORG: :width 100
-[[./img/polimi-M0.png]]
-#+end_comment
-
 ** Implemented computational tools and external libraries
-The task 
-Outside the general purpose Python ecosystem (numpy, pandas, pytest, etc.), the following libraries have been employed  to complete this work:
+The various tasks have been implemented in Python which are summarised as:
+- Functionality to automatically retrieve data from YahooFinance, select a diversified porfolio, create features such as returns, volatilities, moving averages etc.
+- Similarly a front-end to get factors and risk-free rate data and construct a factor model via Ordinary Least squares.
+- A wrapper for the creation of an ARIMA  model and hyperparameter search of the underlying model  parameters.
+- A portfolio optimization framework with constraints and leveraging Scipy optimization engine.
+- Black-Litterman portfolio approach to introduce the asset's manager views.
+- A set of utilities to ...
+- A testing framework to validate the codes, including the OLS for factors model building, the Black-Litterman implementation and the portfolio optimization. 
+Outside the general-purpose Python ecosystem (numpy, pandas, etc.), the following libraries have been employed  to complete this work:
 - *getFamaFrenchFactors*: Collects data for fame french factors from the Kenneth French library
   https://pypi.org/project/getFamaFrenchFactors/
 - *statsmodels*: statistical software used to deploy an ARIMA process on the asset returns and also to fit the factors to data using an Ordinary Least Squares (OLS) approach. 
   https://www.statsmodels.org/stable/index.html
-- *yahoofinance*: used 
+- *yahoofinance*: employed to get financial data such companies prices or market capitalization.
   https://python-yahoofinance.readthedocs.io/en/latest/
 * Theory
 ** Black-Litterman model
