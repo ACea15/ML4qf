@@ -61,7 +61,7 @@
 #+end_src
 
 * Introduction
-
+The goal of this project is to implement a Black-Litterman portfolio optimization framework and leverage factor analysis in the portfolio construction. In this section the project specifications are outlined together with the implemented computational tools to fulfil them.
 ** Specifications:
 From a high level view these were the requirements in the assignment, all of which have been completed:
 - Pick a portfolio of assets that yields good diversification.
@@ -169,7 +169,7 @@ The parameters of the ARIMA model are defined as follows:
 - Hierarchical Risk Parity (HRP)   
 
 * Results
-The analysis is divided in three major sections: a portfolio selection of 10 assets from the S&P500 and the factor analysis of those assets; a statistical analysis using an ARIMA process in order to project the assets onto the future and generate the views input to the portfolio optimisation; and finally the Black-Litterman portfolio optimization with backtesting.  
+The analysis herein is divided in three major sections: a portfolio selection of 10 assets from the S&P500 and the factor analysis of those assets; a statistical analysis using an ARIMA process in order to project the assets onto the future and generate the views input to the portfolio optimisation; and finally the Black-Litterman portfolio optimization with backtesting.  
 ** Portfolio and Factor analysis
 :PROPERTIES:
 :header-args: :session py1 :tangle yes :exports none
@@ -269,53 +269,73 @@ The resulting portfolio is shown in Table  [[df_portfolio_summary]].
 | DXC  | 4.23124e+09 |    0.00515418 | Technology             |
 JP Morgan is the flagship of the porfolio and DXC Technology sits at the bottom of the portfolio in terms of size. 
 *** Assets exploratory analysis
-Monthly returns are used for the analysis as a better metric for a portfolio that is not going to be rebalanced for long periods of time. A period of over 20 years is taken for both the analysis and the backtesting as to make sure a reasonable amount of data is utilised in the study. Table [[df_assets]] 
-#+NAME: df_assets
+Monthly returns are used for the analysis as a better metric for a portfolio that is not going to be rebalanced for long periods of time. A period of over 20 years is taken for both the analysis and the backtesting as to make sure a reasonable amount of data is utilised in the study. The data is divided into a training and testing set with the forming comprising roughly 20 years and the latter over 2 years. The returns and dates of the assets for the first and last five days are shown in Table [[df_assets_training]] for the training set and in Table[[ df_assets_testing]] for the testing set.
+#+NAME: df_assets_training
 #+begin_src python :session py1 :results raw :exports results :tangle no
-  df_assets2show = pd.concat([df_assets.iloc[:5],df_assets.iloc[-5:]])
+  df_assets2show = pd.concat([df_assets_train.iloc[:5],df_assets_train.iloc[-5:]])
   df_assets2show.index = df_assets2show.index.date
-  tabulate(df_assets2show,
+  tabulate(df_assets2show.round(decimals=3),
            headers=asset_names,
            showindex=True,
            tablefmt='orgtbl')
 #+end_src
-#+NAME: df_assets
+#+NAME: df_assets_training
+#+CAPTION: Portfolio monthly returns training data
 #+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption  
-#+RESULTS: df_assets
-|            |        JPM |         CVS |       ATVI |         PH |       WELL |        YUM |         KR |        ATO |        EQT |        DXC |
-|------------+------------+-------------+------------+------------+------------+------------+------------+------------+------------+------------|
-| 2000-03-01 |  0.0949765 |   0.0732143 | -0.0492617 |   0.139655 |  -0.100402 |   0.166667 |   0.175732 | -0.0437956 |   0.187086 | 0.00396511 |
-| 2000-04-01 |   -0.17276 |     0.15807 |  -0.481865 |   0.125567 |   0.138393 |  0.0905433 |  0.0569395 | -0.0305344 |  0.0348675 |  0.0308057 |
-| 2000-05-01 |  0.0355287 |           0 | -0.0099994 |  -0.103495 | 0.00784314 |  -0.134686 |  0.0707071 |   0.153543 |  0.0727763 |   0.174713 |
-| 2000-06-01 | -0.0748954 |  -0.0804598 |  0.0505057 |  -0.178411 |  0.0126459 | -0.0362472 |   0.110063 | -0.0435154 | -0.0298367 |  -0.220483 |
-| 2000-07-01 |  0.0814111 |     -0.0125 |   0.346154 |  0.0383212 |   0.106628 |  -0.141593 | -0.0623229 |    0.17752 |  0.0786662 |  -0.171548 |
-| 2022-07-01 |  0.0244206 |   0.0325922 |   0.026843 |   0.174924 |  0.0484517 |  0.0795525 | -0.0188042 |  0.0828724 |   0.279942 |  0.0425602 |
-| 2022-08-01 | -0.0141297 |   0.0258152 | -0.0182614 | -0.0833304 |  -0.112231 | -0.0922148 |  0.0322997 | -0.0659857 |  0.0856235 |  -0.215823 |
-| 2022-09-01 | -0.0811572 |   -0.028324 |  -0.052873 | -0.0856227 |  -0.160861 | -0.0440489 | -0.0874009 |  -0.101693 |   -0.14749 | -0.0121066 |
-| 2022-10-01 |   0.204593 | -0.00702533 | -0.0207155 |   0.199373 |  -0.050995 |   0.111999 |  0.0809143 |  0.0461463 |  0.0267485 |   0.174428 |
-| 2022-11-01 |  0.0977121 |   0.0758184 |  0.0157966 |  0.0286285 |   0.163663 |  0.0880339 |  0.0401776 |   0.128109 |  0.0136233 |      0.032 |
+#+RESULTS: df_assets_training
+|            |    JPM |    CVS |   ATVI |     PH |   WELL |    YUM |     KR |    ATO |    EQT |    DXC |
+|------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------|
+| 2000-03-01 |  0.095 |  0.073 | -0.049 |   0.14 |   -0.1 |  0.167 |  0.176 | -0.044 |  0.187 |  0.004 |
+| 2000-04-01 | -0.173 |  0.158 | -0.482 |  0.126 |  0.138 |  0.091 |  0.057 | -0.031 |  0.035 |  0.031 |
+| 2000-05-01 |  0.036 |      0 |  -0.01 | -0.103 |  0.008 | -0.135 |  0.071 |  0.154 |  0.073 |  0.175 |
+| 2000-06-01 | -0.075 |  -0.08 |  0.051 | -0.178 |  0.013 | -0.036 |   0.11 | -0.044 |  -0.03 |  -0.22 |
+| 2000-07-01 |  0.081 | -0.012 |  0.346 |  0.038 |  0.107 | -0.142 | -0.062 |  0.178 |  0.079 | -0.172 |
+| 2020-04-01 |  0.064 |  0.037 |  0.071 |  0.219 |  0.119 |  0.261 |  0.049 |  0.028 |  1.064 |  0.389 |
+| 2020-05-01 |  0.016 |  0.065 |  0.129 |  0.138 | -0.011 |  0.038 |  0.032 |  0.008 | -0.086 | -0.216 |
+| 2020-06-01 | -0.033 | -0.009 |  0.054 |  0.018 |  0.021 | -0.031 |  0.038 | -0.031 | -0.108 |  0.161 |
+| 2020-07-01 |  0.027 | -0.031 |  0.089 | -0.024 |  0.035 |  0.048 |  0.028 |  0.064 |   0.22 |  0.085 |
+| 2020-08-01 |  0.037 | -0.013 |  0.011 |  0.151 |  0.074 |  0.053 |  0.026 | -0.058 |  0.093 |  0.116 |
+
+#+NAME: df_assets_testing
+#+begin_src python :session py1 :results raw :exports results :tangle no
+  df_assets2show = pd.concat([df_assets_test.iloc[:5],df_assets_test.iloc[-5:]])
+  df_assets2show.index = df_assets2show.index.date
+  tabulate(df_assets2show.round(decimals=3),
+           headers=asset_names,
+           showindex=True,
+           tablefmt='orgtbl')
+#+end_src
+#+NAME: df_assets_testing
+#+CAPTION: Portfolio monthly returns testing data
+#+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption  
+#+RESULTS: df_assets_testing
+|            |    JPM |    CVS |   ATVI |     PH |   WELL |    YUM |     KR |    ATO |    EQT |    DXC |
+|------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------|
+| 2020-09-01 | -0.039 |  -0.06 | -0.031 | -0.018 | -0.042 | -0.047 |  -0.05 | -0.042 | -0.185 | -0.107 |
+| 2020-10-01 |  0.018 |  -0.04 | -0.064 |   0.03 | -0.024 |  0.022 |  -0.05 | -0.041 |  0.171 |  0.032 |
+| 2020-11-01 |  0.202 |  0.209 |   0.05 |  0.283 |  0.171 |  0.134 |  0.025 |  0.046 | -0.017 |  0.189 |
+| 2020-12-01 |  0.078 |  0.008 |  0.168 |  0.019 |  0.026 |  0.026 | -0.038 | -0.005 | -0.146 |  0.175 |
+| 2021-01-01 |  0.013 |  0.049 |  -0.02 | -0.029 | -0.062 | -0.065 |  0.086 | -0.067 |  0.283 |  0.095 |
+| 2022-07-01 |  0.024 |  0.033 |  0.027 |  0.175 |  0.048 |   0.08 | -0.019 |  0.083 |   0.28 |  0.043 |
+| 2022-08-01 | -0.014 |  0.026 | -0.018 | -0.083 | -0.112 | -0.092 |  0.032 | -0.066 |  0.086 | -0.216 |
+| 2022-09-01 | -0.081 | -0.028 | -0.053 | -0.086 | -0.161 | -0.044 | -0.087 | -0.102 | -0.147 | -0.012 |
+| 2022-10-01 |  0.205 | -0.007 | -0.021 |  0.199 | -0.051 |  0.112 |  0.081 |  0.046 |  0.027 |  0.174 |
+| 2022-11-01 |  0.098 |  0.076 |  0.016 |  0.029 |  0.164 |  0.088 |   0.04 |  0.128 |  0.014 |  0.032 |
+
 #
-Fig. [[basket_returns]] shows the returns evolution of the assets over the period of analysis.
+The same data in the tables can be visualised in Fig. [[basket_returns]] for the whole period of analysis.
 #+NAME: basket_returns
 #+begin_src python :results value file  :exports results :var name=(org-element-property  :name (org-element-context))
   # Plot basket_returns
-  import plotly.graph_objs as go
-  layout = go.Layout(
-  margin=go.layout.Margin(
-        l=0, #left margin
-        r=0, #right margin
-        b=0, #bottom margin
-        t=0  #top margin
-    )
-  )
   fig1_path= img_dir / f'{name}.png'
-  fig1 = px.line(df_assets, y=df_assets.keys())
+  fig1 = px.line(df_assets, y=df_assets.keys(),
+                 labels={'value':'Monthly returns'})
   fig1.update_layout(margin_b=3, margin_t=5)
   fig1.write_image(fig1_path)
   fig1_path #
 #+end_src
 #+NAME: basket_returns
-#+CAPTION:  Asset's basket returns
+#+CAPTION:  Asset's basket returns over the studied period 
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: basket_returns
 [[file:img/basket_returns.png]]
@@ -326,7 +346,7 @@ The correlation between the returns is a good indication of how well diversified
   # Plot AssetsCorrelation
   fig1_path= img_dir / f'{name}.png'
   df_corr = df_assets.corr().round(2)
-  fig1 = px.imshow(np.abs(df_corr))
+  fig1 = px.imshow(np.abs(df_corr), text_auto = True, color_continuous_scale='blues')
   #fig1.layout.height = 600
   #fig1.layout.width = 600
   fig1.update_layout(margin_l=0,margin_b=3, margin_t=5)
@@ -334,12 +354,13 @@ The correlation between the returns is a good indication of how well diversified
   fig1_path #
 #+end_src
 #+CAPTION: Assets correlation
-#+ATTR_LATEX: :width 0.75\textwidth 
+#+NAME: AssetsCorrelation
+#+ATTR_LATEX: :width 0.9\textwidth 
 #+RESULTS: AssetsCorrelation
 [[file:img/AssetsCorrelation.png]]
-
+\newpage
 *** Factor collection
-The 5 Fama-French factors are retrieved for the dates of interest together with the momentum factor and the risk-free interest rate. As with the returns, monthly  They are plotted in Fig. [[Factors_evolution]] and [[RFrate_evolution]] respectively.
+The 5 Fama-French factors are retrieved for the dates of interest together with the momentum factor and the risk-free interest rate. As with the returns, monthly periods are considered. Fig. [[Factors_evolution]] shows the evolution of the six factors studied and Fig. [[RFrate_evolution]] presents the annualised interest rates.
 #+NAME: Load Fama and French 5 factors and Momentum factor  
 #+begin_src python  :results none
   # Load Fama and French 5 factors and Momentum factor
@@ -356,11 +377,12 @@ The 5 Fama-French factors are retrieved for the dates of interest together with 
   # Plot monthly Factors evolution 
   fig1_path= img_dir / f'{name}.png'
   fig1 = px.line(df_factors, y=factor_names)
+  fig1.update_layout(margin_b=3, margin_t=5)
   fig1.write_image(fig1_path)
   fig1_path # 
 #+end_src
 #+NAME: Factors_evolution 
-#+CAPTION: Factors evolution
+#+CAPTION: 5 Fama-French and Momentun factors evolution
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: Factors_evolution
 [[file:img/Factors_evolution.png]]
@@ -369,6 +391,8 @@ The 5 Fama-French factors are retrieved for the dates of interest together with 
 #+begin_src python :results value file  :exports results :var name=(org-element-property  :name (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
   fig1 = px.line(df_factors*12, y='RF')
+  fig1.update_layout(margin_r=12, margin_l=1,
+                     margin_b=3, margin_t=5)
   fig1.write_image(fig1_path)
   fig1_path #
 #+end_src
@@ -391,6 +415,7 @@ With the asset returns, the factors and the risk-free rate, the $\alpha$ vector 
   factor_model = financial_factors.factor_lin_generator(alpha, beta)
 #+end_src
 
+Note the regression is computed based on the training data only, such that we can backtest how well it performs on the testing data.
 #+NAME: Data Frame df_train_factors with alphas and betas
 #+begin_src python  :results raw :exports results :tangle no
   albe = np.vstack([alpha, beta]).T
@@ -416,12 +441,7 @@ With the asset returns, the factors and the risk-free rate, the $\alpha$ vector 
 | EQT  |  -0.00322677 |  1.09022 |  0.140145 | -0.317918 | 0.955749 |   0.672032 | -0.0193002 |
 | DXC  |  -0.00517583 |  1.47021 | -0.098542 | 0.0172014 | 0.263557 | 0.00627073 |  -0.250473 |
 
-In Appendix [[sec:appx_arima]] a summary of the OLS calculation to approximate the factors is presented
-#+NAME: Summary of factors OLS
-#+begin_src python :results output :exports results :tangle no
-  print(factor_models[asset_names[3]].summary())
-#+end_src
-
+With the /alpha/ and /betas/ approximated, one can create a model to approximate the asset returns based on the factors information of the markets.
 #+NAME: Compute factor model prediction
 #+begin_src python :results none
   # Compute factor model prediction
@@ -472,7 +492,7 @@ In Appendix [[sec:appx_arima]] a summary of the OLS calculation to approximate t
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: predicted_returns0
 #+end_comment
-
+For the factor backtesting, the predicted returns given the 6-factor data are compared to the actual returns of each asset.  
 #+NAME: Function to plot returns from factor model
 #+begin_src python :results none 
   def plot_rets_fromfactors(df_assets,
@@ -480,9 +500,10 @@ In Appendix [[sec:appx_arima]] a summary of the OLS calculation to approximate t
                             df_returns_pred,
                             i_asset,
                             name):
+      """Function to plot returns from factor model"""
 
       i_name = asset_names[i_asset]
-      fig1_path= img_dir / f'{name}{i_name}.png'
+      fig1_path= img_dir / f'{name}.png'
       fig1 = go.Figure()
       fig1.add_trace(go.Scatter(
           x=df_assets.index,
@@ -494,13 +515,42 @@ In Appendix [[sec:appx_arima]] a summary of the OLS calculation to approximate t
           y=df_returns_pred[i_name],
           mode='lines',
           name=f"{i_name} pred."))
-
+      fig1.update_layout(margin_b=3, margin_l=2, margin_t=5,
+                         yaxis_title='Monthly returns')
       fig1.write_image(fig1_path)
       return str(fig1_path)
 
 #+end_src
+Some of the companies are better correlated with the factors and so the approximation is more accurate, as is the case for example for JPM and PH, whose returns from the factor model are depicted in Figures [[predicted_factorreturns_JPM]] and [[predicted_factorreturns_PH]] respectively.
+#+NAME: predicted_factorreturns_JPM
+#+begin_src python :noweb eval :results value file  :exports results :var name=(org-element-property :name (org-element-context)) 
+  fig1_path = plot_rets_fromfactors(df_assets_test,
+                                   df_factors_test,
+                                   df_returns_pred,
+                                   i_asset=0, name=name)
+  fig1_path #
+#+end_src
+#+NAME: predicted_factorreturns_JPM
+#+CAPTION:  Backtesting factor approaximation on JPM
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: predicted_factorreturns_JPM
 
-#+NAME: predicted_factorreturns_test
+#+NAME: predicted_factorreturns_PH
+#+begin_src python :noweb eval :results value file  :exports results :var name=(org-element-property :name (org-element-context)) 
+  fig1_path = plot_rets_fromfactors(df_assets_test,
+                                   df_factors_test,
+                                   df_returns_pred,
+                                   i_asset=3, name=name)
+  fig1_path #
+#+end_src
+#+NAME: predicted_factorreturns_PH
+#+CAPTION:  Backtesting factor approximation on PH
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: predicted_factorreturns_PH
+[[file:img/predicted_factorreturns_PH.png]]
+
+On the contrary, CVS's returns are captured by the factor model but not as well as JPM and PH, as shown in Fig. [[predicted_factorreturns_CVS]]. And for ATVI the approximation is even less accurate. Note that these results are in line with the matrix of correlations in Fig. [[AssetsCorrelation]]: JPM and PH show higher correlations with the rest of the assets than CVS, and ATVI represents one with smallest correlations.  
+#+NAME: predicted_factorreturns_CVS
 #+begin_src python :noweb eval :results value file  :exports results :var name=(org-element-property :name (org-element-context)) 
   fig1_path = plot_rets_fromfactors(df_assets_test,
                                    df_factors_test,
@@ -508,29 +558,67 @@ In Appendix [[sec:appx_arima]] a summary of the OLS calculation to approximate t
                                    i_asset=1, name=name)
   fig1_path #
 #+end_src
-#+CAPTION:  Backtesting factor approaximation on Google asset
+#+NAME: predicted_factorreturns_CVS
+#+CAPTION:  Backtesting factor approaximation on CVS
 #+ATTR_LATEX: :width 0.75\textwidth 
-#+RESULTS: predicted_factorreturns_test
-[[file:img/predicted_factorreturns_testCVS.png]]
+#+RESULTS: predicted_factorreturns_CVS
+[[file:img/predicted_factorreturns_CVS.png]]
 
+#+NAME: predicted_factorreturns_ATVI
+#+begin_src python :noweb eval :results value file  :exports results :var name=(org-element-property :name (org-element-context)) 
+  fig1_path = plot_rets_fromfactors(df_assets_test,
+                                   df_factors_test,
+                                   df_returns_pred,
+                                   i_asset=2, name=name)
+  fig1_path #
+#+end_src
+#+NAME: predicted_factorreturns_ATVI
+#+CAPTION:  Backtesting factor approaximation on ATVI
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: predicted_factorreturns_ATVI
+[[file:img/predicted_factorreturns_ATVI.png]]
+
+In Appendix [[appx_factors]] a summary of the OLS computation output to approximate the factors can be found for JPM, PH, CVS and ATVI. 
+#+NAME: SummaryfactorsOLS_JPM
+#+begin_src python :results output :exports results :tangle no
+  print(factor_models[asset_names[0]].summary())
+#+end_src
+
+#+NAME: SummaryfactorsOLS_CVS
+#+begin_src python :results output :exports results :tangle no
+  print(factor_models[asset_names[1]].summary())
+#+end_src
+
+#+NAME: SummaryfactorsOLS_ATVI
+#+begin_src python :results output :exports results :tangle no
+  print(factor_models[asset_names[2]].summary())
+#+end_src
+
+#+NAME: SummaryfactorsOLS_PH
+#+begin_src python :results output :exports results :tangle no
+  print(factor_models[asset_names[3]].summary())
+#+end_src
+
+
+#+BEGIN_COMMENT
 #+NAME: predicted_factorreturns_train
 #+begin_src python :noweb eval :results value file  :exports results :var name=(org-element-property :name (org-element-context))
   fig1_path = plot_rets_fromfactors(df_assets_train,
                                     df_factors_train,
                                     df_returns_predt,
-                                    i_asset=1, name=name)
+                                    i_asset=0, name=name)
   fig1_path #
 #+end_src
 #+CAPTION:  Backtesting factor approaximation on Google asset
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: predicted_factorreturns_train
-[[file:img/predicted_factorreturns_trainCVS.png]]
-
+[[file:img/predicted_factorreturns_trainJPM.png]]
+#+END_COMMENT
 ** ARIMA model for the the generation of asset views
 :PROPERTIES:
 :header-args: :session py1 :tangle yes :exports none
 :END:
-Firstly an ARIMA process is constructed with a hyperparameter search for the p, d and q parameters. 
+Firstly an ARIMA process is constructed with a hyperparameter search for the p, d and q parameters. Then a backtest of the asset's returns predictions is carried out and based on those predictions a set of views are imposed for the portfolio construction in next section. 
 *** ARIMA model construction
 #+BEGIN_COMMENT
 #+NAME: arima_autocorrelation
@@ -550,6 +638,7 @@ Firstly an ARIMA process is constructed with a hyperparameter search for the p, 
 
 #+begin_src python :results none
   def pick_arimahyper(errs):
+      """ Builds ARIMA parameters and errors from hyperparameter search"""
       arima_parameters = dict()
       derrors = collections.defaultdict(list)
       derrorsind = collections.defaultdict(list)
@@ -565,7 +654,7 @@ Firstly an ARIMA process is constructed with a hyperparameter search for the p, 
           arima_parameters[k] = derrorsind[k][index[k]]
       return arima_parameters, derrors, derrorsind, minvalue
 #+end_src
-
+The /statsmodels/ library is used to build an AIRIMA model training on the companies returns and predicting in the testing data.  
 #+begin_src python :results none
   if config.compute_arima_parameters:
       errs_train, errs_test = model_stats.arima_hyperparameters(
@@ -600,7 +689,7 @@ Table [[df_arima_parameters]] shows the parameters used in the ARIMA model after
 | q |     15 |   9 |   3 |   6 |  12 |   6 |
 
 *** ARIMA factors prediction
-
+Using the hyperparameters above the best model is built and here the performance of the model on the factors time-series is checked. Figures  [[ARIMA_Mkt-RF_train]] and [[ARIMA_Mkt-RF_test]] present the results of the market premium factor on the training and testing data respectively, and similarly Figures [[ARIMA_CMA_train]] and [[ARIMA_CMA_test]] for the investment input factors. 
 #+begin_src python :results none 
   Xtrain = df_factors_train[factor_names].to_numpy()
   Xtest = df_factors_test[factor_names].to_numpy()
@@ -628,94 +717,69 @@ Table [[df_arima_parameters]] shows the parameters used in the ARIMA model after
                                                              index_test)  
 #+end_src
 
-#+begin_src python :results output  
-  print(arima_train_models['Mkt-RF'].summary())
-#+end_src
-
-#+RESULTS:
-#+begin_example
-                               SARIMAX Results                                
-==============================================================================
-Dep. Variable:                      y   No. Observations:                  219
-Model:                ARIMA(7, 1, 26)   Log Likelihood                 353.712
-Date:                Fri, 18 Aug 2023   AIC                           -639.424
-Time:                        19:26:04   BIC                           -528.847
-Sample:                             0   HQIC                          -594.635
-                                - 219                                         
-Covariance Type:                  opg                                         
-==============================================================================
-                 coef    std err          z      P>|z|      [0.025      0.975]
-------------------------------------------------------------------------------
-ar.L1         -0.3710      0.869     -0.427      0.669      -2.074       1.332
-ar.L2         -0.5165      0.567     -0.912      0.362      -1.627       0.594
-ar.L3         -0.4541      0.535     -0.849      0.396      -1.503       0.594
-ar.L4         -0.3141      0.544     -0.577      0.564      -1.381       0.753
-ar.L5         -0.1476      0.411     -0.359      0.719      -0.953       0.657
-ar.L6         -0.1679      0.350     -0.480      0.631      -0.854       0.518
-ar.L7          0.1141      0.276      0.413      0.679      -0.427       0.655
-ma.L1         -0.4003      0.871     -0.459      0.646      -2.108       1.307
-ma.L2         -0.0158      0.734     -0.022      0.983      -1.455       1.423
-ma.L3          0.1300      0.654      0.199      0.842      -1.151       1.411
-ma.L4         -0.1957      0.484     -0.404      0.686      -1.145       0.754
-ma.L5         -0.1174      0.435     -0.270      0.787      -0.971       0.736
-ma.L6         -0.1957      0.343     -0.570      0.568      -0.868       0.477
-ma.L7         -0.2198      0.250     -0.881      0.379      -0.709       0.269
-ma.L8          0.1011      0.311      0.325      0.745      -0.508       0.710
-ma.L9         -0.0666      0.231     -0.288      0.773      -0.519       0.386
-ma.L10        -0.1963      0.259     -0.758      0.448      -0.704       0.311
-ma.L11         0.1612      0.262      0.614      0.539      -0.353       0.675
-ma.L12        -0.1189      0.227     -0.523      0.601      -0.564       0.326
-ma.L13         0.0582      0.225      0.259      0.796      -0.382       0.499
-ma.L14        -0.0209      0.196     -0.106      0.915      -0.406       0.364
-ma.L15         0.0430      0.145      0.297      0.767      -0.241       0.327
-ma.L16         0.0485      0.177      0.275      0.783      -0.298       0.395
-ma.L17        -0.0518      0.158     -0.327      0.743      -0.362       0.258
-ma.L18        -0.0429      0.172     -0.249      0.803      -0.380       0.295
-ma.L19         0.2715      0.161      1.689      0.091      -0.044       0.587
-ma.L20        -0.2190      0.273     -0.801      0.423      -0.755       0.317
-ma.L21         0.1878      0.283      0.665      0.506      -0.366       0.742
-ma.L22        -0.0844      0.297     -0.284      0.776      -0.667       0.498
-ma.L23         0.0535      0.238      0.225      0.822      -0.413       0.520
-ma.L24         0.0151      0.205      0.074      0.941      -0.387       0.417
-ma.L25         0.0078      0.182      0.043      0.966      -0.350       0.365
-ma.L26        -0.1023      0.138     -0.740      0.459      -0.373       0.169
-sigma2         0.0014      0.000      6.622      0.000       0.001       0.002
-===================================================================================
-Ljung-Box (L1) (Q):                   0.08   Jarque-Bera (JB):                30.28
-Prob(Q):                              0.78   Prob(JB):                         0.00
-Heteroskedasticity (H):               0.90   Skew:                             0.08
-Prob(H) (two-sided):                  0.67   Kurtosis:                         4.94
-===================================================================================
-
-Warnings:
-[1] Covariance matrix calculated using the outer product of gradients (complex-step).
-#+end_example
-
 #+NAME: ARIMA_Mkt-RF_train
 #+begin_src python :results value file :exports results :var name=(org-element-property :name (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
-  fig1 = px.line(df_arimatrain, y=['HML','HML_pred'])
+  fig1 = px.line(df_arimatrain, y=['Mkt-RF','Mkt-RF_pred'])
   fig1.write_image(fig1_path)
   fig1_path #
 
 #+end_src
-#+CAPTION: d
+#+CAPTION: ARIMA model on Market excess returns factor (training data).
+#+NAME: ARIMA_Mkt-RF_train
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: ARIMA_Mkt-RF_train
-[[file:img/ARIMA_Mkt-RF_train.png]]
 
 #+NAME: ARIMA_Mkt-RF_test
 #+begin_src python :results value file :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
-  fig1 = px.line(df_arimatest, y=['HML','HML_pred'])
+  fig1 = px.line(df_arimatest, y=['Mkt-RF','Mkt-RF_pred'])
   fig1.write_image(fig1_path)
   fig1_path #
 
 #+end_src
-#+CAPTION: d
+#+CAPTION: ARIMA model on Market excess returns factor (testing data).
+#+NAME: ARIMA_Mkt-RF_test
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: ARIMA_Mkt-RF_test
-[[file:img/ARIMA_Mkt-RF_test.png]]
+
+#+NAME: ARIMA_CMA_train
+#+begin_src python :results value file :exports results :var name=(org-element-property :name  (org-element-context)) 
+  fig1_path= img_dir / f'{name}.png'
+  fig1 = px.line(df_arimatrain, y=['CMA','CMA_pred'])
+  fig1.write_image(fig1_path)
+  fig1_path #
+
+#+end_src
+#+CAPTION: ARIMA model on CMA factor (training data).
+#+NAME: ARIMA_CMA_train
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: ARIMA_CMA_train
+
+#+NAME: ARIMA_CMA_test
+#+begin_src python :results value file :exports results :var name=(org-element-property :name  (org-element-context)) 
+  fig1_path= img_dir / f'{name}.png'
+  fig1 = px.line(df_arimatest, y=['CMA','CMA_pred'])
+  fig1.write_image(fig1_path)
+  fig1_path #
+
+#+end_src
+#+CAPTION: ARIMA model on CMA factor (testing data).
+#+NAME: ARIMA_CMA_test
+#+ATTR_LATEX: :width 0.75\textwidth 
+#+RESULTS: ARIMA_CMA_test
+
+We can see how moving into the future the ARIMA model loses the variance and therefore it would be necessary to introduce a GARCH model to correctly estimate the volatility component of the assets. This improvement is not pursue herein since the interest in this exercise is to have an overall prediction on the growth of the returns to generate the views.
+The summary of the ARIMA model built for MKT-RK and CMA can be found in Appendix [[sec:appx_arima]] (reports for other factors can be generated within the main code).  
+#+NAME: ARIMA_summary_mkt
+#+begin_src python :results output :exports results :tangle no  
+  print(arima_train_models['Mkt-RF'].summary())
+#+end_src
+
+#+NAME: ARIMA_summary_cma
+#+begin_src python :results output :exports results :tangle no
+  print(arima_train_models['CMA'].summary())
+#+end_src
 
 *** Backtesting of returns and views from model prediction
 Using the ARIMA model built on the training data set, predicted returns are projected onto the "future", i.e. the testing set, for over two years. The cumulative returns are then compared so that the views for the Black-Litterman model can be proposed. 
@@ -753,7 +817,7 @@ Using the ARIMA model built on the training data set, predicted returns are proj
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: ARIMA_returnsbacktest
 [[file:img/ARIMA_returnsbacktest.png]]
-#
+
 The first assets we compare are JPM and PH, which showed one of the strongest correlations. Fig. [[ARIMA_returnsbacktestJPM_PH]] shows PH outperforming JPM by nearly 11% over the period of 26 months.
 #+NAME: ARIMA_returnsbacktestJPM_PH
 #+begin_src python :results value file :exports results :var name=(org-element-property :name  (org-element-context)) 
@@ -770,7 +834,7 @@ The first assets we compare are JPM and PH, which showed one of the strongest co
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: ARIMA_returnsbacktestJPM_PH
 [[file:img/ARIMA_returnsbacktestJPM_PH.png]]
-Looking at an absolute view, we can see in Fig. [[ARIMA_returnsbacktestEQT]] the forecast of the energy company EQT is better than many of the others --although it is not close to the actual growth the asset underwent over this period. A 29% increment is predicted and it is what will be taken for the view. 
+Looking at an absolute view, we can see in Fig. [[ARIMA_returnsbacktestEQT]] the forecast of the energy company EQT is better than many of the others --although it is not close to the actual growth the asset underwent over this period. A 29%  increment over the curse of the testing is predicted and it is what will be taken for the view. 
 #+NAME: ARIMA_returnsbacktestEQT
 #+begin_src python :results value file :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
@@ -807,6 +871,7 @@ Finally an interesting comparison appears for the ATO and KR tickers, where the 
 #+RESULTS: #+NAME: ARIMA_returnsbacktestATO
 [[file:img/ARIMA_returnsbacktestATO.png]]
 
+
 Given these results on the testing data set, the following views are proposed: 
 - EQT to rise 12% annually
 - PH to outperform JPM by 6% annually
@@ -825,14 +890,13 @@ Q = \begin{bmatrix}
 \end{bmatrix}
 $$
 
-
 ** Black-Litterman based portfolio
 :PROPERTIES:
 :header-args: :session py1 :exports none :tangle yes
 :END:
 *** COMMENT Covariance treatment
 *** Prior and posterior returns construction
-The first step in the calculation is the covariance between the assets. One could use the data forecast in the test data but it would have entailed the combination of a GARCH model with the ARIMA model to accurately predict the variances, which was not a requirement in this work. Thus historical data (training batch) is relied upon. Two options are possible, either calculate the covariance directly on the excess returns, or on the factors and derive the subsequent covariance on the returns using the matrix of betas. 
+The first step in the portfolio construction is to compute the covariance between the assets. One could use the data forecast in the test data but it would have entailed the combination of a GARCH model with the ARIMA model to accurately predict the variances, which was not a requirement in this work. Thus historical data (from the training batch) is relied upon. Two options are possible, either calculate the covariance directly on the excess returns, or on the factors and derive the subsequent covariance on the returns using the matrix of betas. It was found the former was more robust so all the following calculations use that.
 #+NAME: Calculate Covariance of excess returns
 #+begin_src python :results none
   # Calculate Covariance from assets and from factors
@@ -1451,49 +1515,17 @@ Next the P&L of the variance optimisation is calculated for a target return of 1
 | w_opt-BL  | 0.26 |  0.1 | 0.07 | 0.26 | 0.03 | 0.04 | 0.13 |    0 |  0.1 | 0.01 |
 | w_opt-mkt | 0.54 | 0.12 | 0.09 | 0.07 | 0.05 | 0.05 | 0.04 | 0.02 | 0.02 | 0.01 |
 
+
+
+
+* Conclusions and further work
+A Black-Litterman portfolio optimisation with factors has been implemented. Views were generated using a statistical ARIMA process to forecast over 2 years onto the future using 20 years of past data. Mean-variance, variance and Sharpe ratio optimisations with constraints were carried out and the resulting optimised portfolio with views is shown to outperform both the S&P500 index and a naive selection of 1/N assets.
+
+As for future work three main areas are identified where important improvements can be made: 1) the factors prediction would be much stronger with a Machine Learning model such as an LSTM; and better predictions mean more relevant views 2) A covariance treatment with denoising would make the results from the optimisation more robust. 3) using a more advance optimisation strategy such as De Prado's Hierarchical Risk Parity.
 #+LaTeX: \appendix
-* ARIMA results summary
-<<sec:appx_arima>>
+* Code installation, execution, and structure
+<<sec:appx_code>>
 
-Summary of factors OLS:
-#+ATTR_LATEX: :width 0.7\textwidth
-#+CAPTION: Summary of factors OLS
-#+RESULTS: Summary of factors OLS
-#+begin_example
-                            OLS Regression Results                            
-==============================================================================
-Dep. Variable:                      y   R-squared:                       0.596
-Model:                            OLS   Adj. R-squared:                  0.586
-Method:                 Least Squares   F-statistic:                     57.52
-Date:                Sat, 19 Aug 2023   Prob (F-statistic):           2.27e-43
-Time:                        09:30:45   Log-Likelihood:                 362.43
-No. Observations:                 241   AIC:                            -710.9
-Df Residuals:                     234   BIC:                            -686.5
-Df Model:                           6                                         
-Covariance Type:            nonrobust                                         
-==============================================================================
-                 coef    std err          t      P>|t|      [0.025      0.975]
-------------------------------------------------------------------------------
-const         -0.0037      0.004     -0.989      0.324      -0.011       0.004
-x1             1.5265      0.102     14.974      0.000       1.326       1.727
-x2             0.4244      0.140      3.029      0.003       0.148       0.700
-x3            -0.1418      0.160     -0.889      0.375      -0.456       0.173
-x4             1.1572      0.185      6.269      0.000       0.793       1.521
-x5             0.5258      0.235      2.240      0.026       0.063       0.988
-x6            -0.2241      0.077     -2.914      0.004      -0.376      -0.073
-==============================================================================
-Omnibus:                        2.734   Durbin-Watson:                   2.168
-Prob(Omnibus):                  0.255   Jarque-Bera (JB):                2.908
-Skew:                          -0.013   Prob(JB):                        0.234
-Kurtosis:                       3.538   Cond. No.                         75.7
-==============================================================================
-
-Notes:
-[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
-#+end_example
-
-#+LaTeX: \appendix
-* Code execution
 The codes herein have been tested in Linux (Ubuntu 22 and Centos 8) and in MacOs. To install and execute follow the next steps.
 
 ** Installing the code
@@ -1505,4 +1537,246 @@ They are located in the folder ./test and can be run by navigating to this folde
 Both the pdf from code have been simultaneously generated from an Emacs .org file. This type of file bears resemblance with Python notebooks but it is more powerful, albeit being also much older.
 tangle
 export
-** 
+* Factors OLS
+<<sec:appx_factors>>
+- JPM results:
+  #+RESULTS: SummaryfactorsOLS_JPM
+  #+begin_example
+                              OLS Regression Results                            
+  ==============================================================================
+  Dep. Variable:                      y   R-squared:                       0.659
+  Model:                            OLS   Adj. R-squared:                  0.650
+  Method:                 Least Squares   F-statistic:                     76.91
+  Date:                Mon, 21 Aug 2023   Prob (F-statistic):           5.04e-53
+  Time:                        10:57:22   Log-Likelihood:                 384.56
+  No. Observations:                 246   AIC:                            -755.1
+  Df Residuals:                     239   BIC:                            -730.6
+  Df Model:                           6                                         
+  Covariance Type:            nonrobust                                         
+  ==============================================================================
+                   coef    std err          t      P>|t|      [0.025      0.975]
+  ------------------------------------------------------------------------------
+  const          0.0065      0.004      1.848      0.066      -0.000       0.013
+  x1             0.9222      0.090     10.197      0.000       0.744       1.100
+  x2            -0.2854      0.130     -2.191      0.029      -0.542      -0.029
+  x3             1.1856      0.146      8.093      0.000       0.897       1.474
+  x4            -1.0721      0.166     -6.477      0.000      -1.398      -0.746
+  x5            -0.4933      0.220     -2.245      0.026      -0.926      -0.061
+  x6            -0.2732      0.072     -3.806      0.000      -0.415      -0.132
+  ==============================================================================
+  Omnibus:                       37.395   Durbin-Watson:                   2.142
+  Prob(Omnibus):                  0.000   Jarque-Bera (JB):              127.988
+  Skew:                           0.575   Prob(JB):                     1.61e-28
+  Kurtosis:                       6.342   Cond. No.                         75.0
+  ==============================================================================
+
+  Notes:
+  [1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+  #+end_example
+- CVS results:
+  #+RESULTS: SummaryfactorsOLS_CVS
+  #+begin_example
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                      y   R-squared:                       0.250
+Model:                            OLS   Adj. R-squared:                  0.232
+Method:                 Least Squares   F-statistic:                     13.31
+Date:                Mon, 21 Aug 2023   Prob (F-statistic):           5.26e-13
+Time:                        10:53:37   Log-Likelihood:                 327.04
+No. Observations:                 246   AIC:                            -640.1
+Df Residuals:                     239   BIC:                            -615.5
+Df Model:                           6                                         
+Covariance Type:            nonrobust                                         
+==============================================================================
+                 coef    std err          t      P>|t|      [0.025      0.975]
+------------------------------------------------------------------------------
+const         -0.0015      0.004     -0.335      0.738      -0.010       0.007
+x1             0.8682      0.114      7.598      0.000       0.643       1.093
+x2            -0.2158      0.165     -1.311      0.191      -0.540       0.108
+x3             0.0122      0.185      0.066      0.948      -0.352       0.377
+x4             0.2534      0.209      1.212      0.227      -0.159       0.665
+x5             1.0739      0.278      3.869      0.000       0.527       1.621
+x6             0.0267      0.091      0.294      0.769      -0.152       0.205
+==============================================================================
+Omnibus:                       15.254   Durbin-Watson:                   2.057
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):               36.526
+Skew:                          -0.197   Prob(JB):                     1.17e-08
+Kurtosis:                       4.846   Cond. No.                         75.0
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+#+end_example
+- ATVI results:  
+  #+RESULTS: SummaryfactorsOLS_ATVI
+#+begin_example
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                      y   R-squared:                       0.165
+Model:                            OLS   Adj. R-squared:                  0.144
+Method:                 Least Squares   F-statistic:                     7.867
+Date:                Mon, 21 Aug 2023   Prob (F-statistic):           9.59e-08
+Time:                        10:53:29   Log-Likelihood:                 204.59
+No. Observations:                 246   AIC:                            -395.2
+Df Residuals:                     239   BIC:                            -370.6
+Df Model:                           6                                         
+Covariance Type:            nonrobust                                         
+==============================================================================
+                 coef    std err          t      P>|t|      [0.025      0.975]
+------------------------------------------------------------------------------
+const          0.0198      0.007      2.712      0.007       0.005       0.034
+x1             0.8898      0.188      4.734      0.000       0.520       1.260
+x2             0.2429      0.271      0.897      0.371      -0.291       0.776
+x3            -0.2061      0.304     -0.677      0.499      -0.806       0.394
+x4            -0.4707      0.344     -1.368      0.173      -1.148       0.207
+x5             0.2124      0.457      0.465      0.642      -0.687       1.112
+x6             0.3921      0.149      2.628      0.009       0.098       0.686
+==============================================================================
+Omnibus:                       42.871   Durbin-Watson:                   1.836
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):              151.251
+Skew:                           0.667   Prob(JB):                     1.43e-33
+Kurtosis:                       6.602   Cond. No.                         75.0
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+#+end_example
+- PH results:  
+  #+RESULTS: SummaryfactorsOLS_PH
+#+begin_example
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                      y   R-squared:                       0.607
+Model:                            OLS   Adj. R-squared:                  0.597
+Method:                 Least Squares   F-statistic:                     61.61
+Date:                Mon, 21 Aug 2023   Prob (F-statistic):           8.36e-46
+Time:                        10:53:20   Log-Likelihood:                 370.35
+No. Observations:                 246   AIC:                            -726.7
+Df Residuals:                     239   BIC:                            -702.2
+Df Model:                           6                                         
+Covariance Type:            nonrobust                                         
+==============================================================================
+                 coef    std err          t      P>|t|      [0.025      0.975]
+------------------------------------------------------------------------------
+const         -0.0038      0.004     -1.031      0.304      -0.011       0.003
+x1             1.4929      0.096     15.580      0.000       1.304       1.682
+x2             0.4461      0.138      3.232      0.001       0.174       0.718
+x3            -0.1243      0.155     -0.801      0.424      -0.430       0.181
+x4             1.1458      0.175      6.534      0.000       0.800       1.491
+x5             0.4756      0.233      2.043      0.042       0.017       0.934
+x6            -0.2364      0.076     -3.108      0.002      -0.386      -0.087
+==============================================================================
+Omnibus:                        2.827   Durbin-Watson:                   2.164
+Prob(Omnibus):                  0.243   Jarque-Bera (JB):                3.056
+Skew:                          -0.008   Prob(JB):                        0.217
+Kurtosis:                       3.546   Cond. No.                         75.0
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+#+end_example
+  
+* ARIMA results summary
+<<sec:appx_arima>>
+
+- MKT-RF factor model parameters
+#+RESULTS: ARIMA_summary_mkt
+#+begin_example
+                               SARIMAX Results                                
+==============================================================================
+Dep. Variable:                      y   No. Observations:                  246
+Model:               ARIMA(15, 0, 15)   Log Likelihood                 410.138
+Date:                Mon, 21 Aug 2023   AIC                           -756.277
+Time:                        12:12:56   BIC                           -646.258
+Sample:                             0   HQIC                          -711.898
+                                - 246                                         
+Covariance Type:                  opg                                         
+==============================================================================
+                 coef    std err          z      P>|z|      [0.025      0.975]
+------------------------------------------------------------------------------
+const          0.0075      0.005      1.620      0.105      -0.002       0.017
+ar.L1          0.2005      0.632      0.317      0.751      -1.037       1.438
+ar.L2          0.2156      0.458      0.470      0.638      -0.683       1.114
+ar.L3         -0.2141      0.312     -0.686      0.493      -0.826       0.398
+ar.L4          0.0598      0.309      0.194      0.846      -0.545       0.665
+ar.L5         -0.3863      0.229     -1.690      0.091      -0.834       0.062
+ar.L6          0.2546      0.317      0.804      0.421      -0.366       0.875
+ar.L7          0.0904      0.289      0.313      0.755      -0.476       0.657
+ar.L8         -0.2626      0.387     -0.679      0.497      -1.021       0.495
+ar.L9         -0.0458      0.243     -0.189      0.850      -0.521       0.430
+ar.L10        -0.0143      0.213     -0.067      0.946      -0.431       0.402
+ar.L11         0.1538      0.217      0.707      0.479      -0.272       0.580
+ar.L12         0.2686      0.225      1.191      0.233      -0.173       0.710
+ar.L13        -0.1839      0.270     -0.680      0.496      -0.714       0.346
+ar.L14        -0.2374      0.180     -1.321      0.187      -0.590       0.115
+ar.L15         0.1025      0.237      0.432      0.665      -0.362       0.567
+ma.L1         -0.2907      0.737     -0.394      0.693      -1.735       1.154
+ma.L2         -0.3223      0.534     -0.604      0.546      -1.369       0.724
+ma.L3          0.4526      0.569      0.796      0.426      -0.662       1.567
+ma.L4          0.0779      0.495      0.157      0.875      -0.892       1.047
+ma.L5          0.6181      0.410      1.508      0.132      -0.185       1.422
+ma.L6         -0.3270      0.506     -0.647      0.518      -1.318       0.664
+ma.L7         -0.0085      0.522     -0.016      0.987      -1.031       1.014
+ma.L8          0.6006      0.762      0.788      0.431      -0.894       2.095
+ma.L9         -0.1827      0.536     -0.341      0.733      -1.234       0.868
+ma.L10        -0.1139      0.349     -0.326      0.744      -0.799       0.571
+ma.L11        -0.3142      0.305     -1.029      0.304      -0.913       0.284
+ma.L12        -0.2274      0.402     -0.566      0.571      -1.015       0.560
+ma.L13         0.3438      0.544      0.632      0.528      -0.723       1.410
+ma.L14         0.0621      0.339      0.183      0.855      -0.603       0.727
+ma.L15         0.1019      0.318      0.321      0.749      -0.521       0.725
+sigma2         0.0012      0.001      1.746      0.081      -0.000       0.003
+===================================================================================
+Ljung-Box (L1) (Q):                   0.02   Jarque-Bera (JB):                25.25
+Prob(Q):                              0.89   Prob(JB):                         0.00
+Heteroskedasticity (H):               1.58   Skew:                            -0.36
+Prob(H) (two-sided):                  0.05   Kurtosis:                         4.45
+===================================================================================
+
+Warnings:
+[1] Covariance matrix calculated using the outer product of gradients (complex-step).
+#+end_example
+#+RESULTS: ARIMA_summary_cma
+#+begin_example
+                               SARIMAX Results                                
+==============================================================================
+Dep. Variable:                      y   No. Observations:                  246
+Model:                ARIMA(6, 4, 12)   Log Likelihood                 571.772
+Date:                Mon, 21 Aug 2023   AIC                          -1105.545
+Time:                        12:12:39   BIC                          -1040.304
+Sample:                             0   HQIC                         -1079.225
+                                - 246                                         
+Covariance Type:                  opg                                         
+==============================================================================
+                 coef    std err          z      P>|z|      [0.025      0.975]
+------------------------------------------------------------------------------
+ar.L1         -2.4798      0.148    -16.777      0.000      -2.769      -2.190
+ar.L2         -3.5526      0.364     -9.753      0.000      -4.267      -2.839
+ar.L3         -3.4898      0.517     -6.746      0.000      -4.504      -2.476
+ar.L4         -2.6013      0.481     -5.405      0.000      -3.545      -1.658
+ar.L5         -1.3663      0.283     -4.824      0.000      -1.921      -0.811
+ar.L6         -0.4168      0.097     -4.317      0.000      -0.606      -0.228
+ma.L1         -0.8129      0.194     -4.194      0.000      -1.193      -0.433
+ma.L2         -0.6925      0.173     -4.000      0.000      -1.032      -0.353
+ma.L3         -0.4260      0.201     -2.116      0.034      -0.821      -0.031
+ma.L4          0.5199      0.188      2.764      0.006       0.151       0.889
+ma.L5          0.3480      0.193      1.801      0.072      -0.031       0.727
+ma.L6          0.4938      0.218      2.261      0.024       0.066       0.922
+ma.L7         -0.1631      0.130     -1.259      0.208      -0.417       0.091
+ma.L8         -0.3331      0.134     -2.483      0.013      -0.596      -0.070
+ma.L9          0.1170      0.155      0.756      0.450      -0.186       0.420
+ma.L10         0.2265      0.136      1.662      0.097      -0.041       0.494
+ma.L11        -0.4269      0.088     -4.852      0.000      -0.599      -0.254
+ma.L12         0.1499      0.097      1.552      0.121      -0.039       0.339
+sigma2         0.0004   5.53e-05      6.665      0.000       0.000       0.000
+===================================================================================
+Ljung-Box (L1) (Q):                   2.52   Jarque-Bera (JB):                16.94
+Prob(Q):                              0.11   Prob(JB):                         0.00
+Heteroskedasticity (H):               0.71   Skew:                            -0.37
+Prob(H) (two-sided):                  0.14   Kurtosis:                         4.11
+===================================================================================
+
+Warnings:
+[1] Covariance matrix calculated using the outer product of gradients (complex-step).
+#+end_example
+
