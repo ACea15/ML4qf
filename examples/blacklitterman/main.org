@@ -76,10 +76,10 @@ In order to fulfil the specifications laid above, a range of tools have been imp
 - Functionality to automatically retrieve data from YahooFinance, select a diversified porfolio, create features such as returns, volatilities, moving averages etc.
 - Similarly, a front-end to get factors and risk-free rate data and construct a factor model via Ordinary Least squares (OLS).
 - A wrapper for the creation of an ARIMA  model and hyperparameter search of the underlying model  parameters. A forecasting capability based of this statistical to estimate short-term future returns and from those extract meaningful views into the assets performance.
-- A portfolio optimization framework with constraints and leveraging Scipy optimization engine.
+- A portfolio optimisation framework with constraints and leveraging Scipy optimisation engine.
 - A model of Black-Litterman portfolio approach to introduce the asset's manager views.
 - A set of utilities to ...
-- A testing framework to validate the codes, including the OLS for factors model building, the Black-Litterman implementation and the portfolio optimization. 
+- A testing framework to validate the codes, including the OLS for factors model building, the Black-Litterman implementation and the portfolio optimisation. 
 Outside the general-purpose Python ecosystem (numpy, pandas, etc.), the following libraries have been employed  to complete this work:
 - *getFamaFrenchFactors*: Collects data for fame french factors from the Kenneth French library
   https://pypi.org/project/getFamaFrenchFactors/
@@ -88,88 +88,58 @@ Outside the general-purpose Python ecosystem (numpy, pandas, etc.), the followin
 - *yahoofinance*: employed to get financial data such companies prices or market capitalization.
   https://python-yahoofinance.readthedocs.io/en/latest/
 * Theory
+A very brief overview is given about the main theoretical points underlying this work since neither literature review nor theoretical development are mandatory.
 ** Black-Litterman model
-
-
+A starting point is the calculation equilibrium returns such that,
 $$
 \mu_{eq} = \lambda \Sigma w_{mkt}
 $$
-
-- $\mu_{eq}$ is the Implied Excess Equilibrium Return Vector 
-- $\lambda$ is the risk aversion coefficient, $\lambda = \frac{E(\mu) - \mu_r}{\sigma^2}$
-- $\Sigma$ is the covariance matrix of excess returns
-- $w_{mkt}$ are market capitalization weights
-
-$$
-E[\mu_{bl}] = \left[(\tau \Sigma)^{-1} + P'\Omega^{-1}P\right]^{-1} \left[(\tau \Sigma)^{-1}\mu_{eq} + P'\Omega^{-1}Q\right]  
-$$
-
-- $E[\mu_{bl}]$: Posterior combined return vector ($N\times a$)
-- $\tau$: error in views
-- $P$: Matrix identifying assets involved in the views ($K\times N$)
-- $Q$: View vector ($K\times 1$)
-- $\Omega$: Diagonal covariance matrix with the errors expressed in the views ($N\times N$). 
-
-Normal distributions:
-
+where
+- $\mu_{eq}$ is the Implied Excess Equilibrium Return Vector.
+- $\lambda$ is the risk aversion coefficient.
+- $\Sigma$ is the covariance matrix of excess returns.
+- $w_{mkt}$ are market capitalization weights.
+Then the Black-Litterman imposes a range of views and works with multivariate normal distributions such as,
 - Prior equilibrium distribution: $N(\mu_{eq}, \tau \Sigma)$
 - Views distribution: $N(Q, \Omega)$
 - New combined return distribution: $N\left(E[\mu_{bl}], \left[(\tau \Sigma)^{-1} + P'\Omega^{-1}P\right]^{-1} \right)$
-  
+To finally arrive to the expected excess returns after imposing the views:    
+$$
+E[\mu_{bl}] = \left[(\tau \Sigma)^{-1} + P'\Omega^{-1}P\right]^{-1} \left[(\tau \Sigma)^{-1}\mu_{eq} + P'\Omega^{-1}Q\right]  
+$$
+where
+- $E[\mu_{bl}]$ is the posterior combined return vector ($N\times a$).
+- $\tau$ is a parameter representing uncertainty in views.
+- $P$ is the matrix identifying assets involved in the views ($K\times N$).
+- $Q$ is the view vector ($K\times 1$).
+- $\Omega$: Diagonal covariance matrix with the errors expressed in the views ($N\times N$).
 ** Fama-French factors
-
-It is one of the multi-factor models which is widely used in both academia and industry to estimate the excess return of an investment asset. It is an extension to Capital Asset Pricing Model (CAPM) by adding two additional factors apart from the market risk when estimating the excess returns of an asset. The three factors considered in this model are:
-
+The Fama-French model is a  multi-factor model the extends the Capital Asset Pricing Model (CAPM), and the five factors considered are:
     - Market factor (MKT): Excess market return
     - Size factor (SMB): Excess return with a small market cap over those with a large market cap
     - Value factor (HML): Excess return of value stocks over growth stocks.
     - Profitability factor (RMW): Excess returns of stocks with strong and weak profitability
     - Investment factor (CMA): Excess returns between high and low investment firms.
-      
-The Fama-French model is widely known as a stock market benchmark to evaluate investment performance.
-
+The factor model is built solving a OLS problem where given a matrix of historical data of excess returns $\pmb{r}_a$ with rows the time snapshots and columns the assets in the portfolio and a similar matrix with the factors data $\pmb{r}_f$, one has to find the vector $\pmb{\alpha}$ and the matrix $\pmb{\beta}$ such that,   
+ 
 $$
-E[r_a] = \mu_a + \beta E[r_f]  + \epsilon_a
+\pmb{r}_a = \pmb{\alpha} + \pmb{r}_f\pmb{\beta}  + \pmb{\epsilon}_a
 $$
-
+$\pmb{\epsilon}_a$ is a vector representing the error in the approximation.
+The covariance of $\pmb{r}_a$ can be found from the covariance of $\pmb{r}_f$ as
 $$
-Var[r_a] = \mu_a + \beta r_f  + \epsilon_a
-$$
-
-$$
-\Pi = w_a^{\top} r_a
-$$
-
-$$
-Var(\Pi) = Var(r_a^{\top} w_a) = Var(r_a^{\top} w_a)
-$$
-
-$$
-\Sigma = B^{\top} \Sigma_f B 
+\Sigma = \pmb{\beta}^{\top} \Sigma_f \pmb{\beta} 
 $$
 
 ** ARIMA model for time series
-AutoRegressive Integrated Moving Average (ARIMA) statistical models are used 
-AR: Autoregression. A model that uses the dependent relationship between an observation and some number of lagged observations.
-I: Integrated. The use of differencing of raw observations (e.g. subtracting an observation from an observation at the previous time step) in order to make the time series stationary.
-MA: Moving Average. A model that uses the dependency between an observation and a residual error from a moving average model applied to lagged observations.
-
-Each of these components are explicitly specified in the model as a parameter. A standard notation is used of ARIMA(p,d,q) where the parameters are substituted with integer values to quickly indicate the specific ARIMA model being used.
-
-The parameters of the ARIMA model are defined as follows:
-
-- p: Number of lags in the observations that included in the model.
-- d: Number of times differencing is applied to the observations.
+ARIMA statistical models are used to model time series data. AR stands for AutoRegression, I for Integrated and MA for Moving Average. Three parameters p, d, q control each of those processes such that a standard notation used is ARIMA(p,d,q).
+The parameters are defined as:
+- p: Number of lags in the observations that is included in the model.
+- d: Number of times differencing is applied to the observations (to make it stationary).
 - q: Size of moving average window.
 
-** Optimisation
-
-- Minimise Mean variance
-- Maximize Sharpe ratio
-- Hierarchical Risk Parity (HRP)   
-
 * Results
-The analysis herein is divided in three major sections: a portfolio selection of 10 assets from the S&P500 and the factor analysis of those assets; a statistical analysis using an ARIMA process in order to project the assets onto the future and generate the views input to the portfolio optimisation; and finally the Black-Litterman portfolio optimization with backtesting.  
+The analysis herein is divided in three major sections: a portfolio selection of 10 assets from the S&P500 and the factor analysis of those assets; a statistical analysis using an ARIMA process in order to project the assets onto the future and generate the views input to the portfolio optimisation; and finally the Black-Litterman portfolio optimisation with backtesting.  
 ** Portfolio and Factor analysis
 :PROPERTIES:
 :header-args: :session py1 :tangle yes :exports none
@@ -238,7 +208,7 @@ The selection is based on a random and automatic generation of the tickers with 
 #+end_src
 The resulting portfolio is shown in Table  [[df_portfolio_summary]].
 #+NAME: Compute and show Data Frame, df_portfolio_summary
-#+begin_src python :results raw :exports results :tangle no
+#+begin_src python :results raw :exports results :tangle yes
   # Compute Data Frame df_portfolio_summary
   df_portfolio_summary = df_selected_tickers.copy()
   #df_portfolio_summary = df_portfolio_summary.drop('first_date', axis=1)
@@ -956,7 +926,9 @@ Covariance matrix of the excess returns is shown in Table [[df_Sigma_train]].
 | DXC  | 0.0039 | 0.0018 | 0.0024 | 0.0044 | 0.0011 | 0.0027 | 0.0009 | 0.0005 | 0.0034 | 0.0141 |
 Next the market equilibrium returns are calculated from the market weights presented in Table [[df_portfolio_summary]].
 #+NAME: Black-Litterman initialisation
-#+begin_src python :results none 
+#+begin_src python :results none
+  f_mu = lambda l, S, w: l * S @ w
+  f_w = lambda l, Sinv, mu: 1/ l * Sinv @ mu
   bl_model_Sassets = bl.BlackLitterman(Sigma_assets_train, w_mkt,
                                        config.lambda_mkt)
   bl_model_Sassets.set_portfolio_inputs(config.tau, config.P, config.Q)
@@ -966,9 +938,9 @@ Next the market equilibrium returns are calculated from the market weights prese
   w_bl = f_w(config.lambda_mkt,
              Sigmainv_assets_train,
              bl_model_Sassets.mu_bl)
-  returns_weights_eq = {"mu_bl": bl_model_Sassets.mu_bl,
-                        "mu_mkt": bl_model_Sassets.mu_mkt,
-                        "mu_bl - mu_mkt": bl_model_Sassets.mu_bl -
+  returns_weights_eq = {"\mu_{bl}": bl_model_Sassets.mu_bl,
+                        "\mu_{mkt}": bl_model_Sassets.mu_mkt,
+                        "\mu_{bl} - \mu_{mkt}": bl_model_Sassets.mu_bl -
                         bl_model_Sassets.mu_mkt,
                         "w_bl": w_bl,
                         "w_mkt": w_mkt,
@@ -977,10 +949,9 @@ Next the market equilibrium returns are calculated from the market weights prese
   df_returns_weights_eq = pd.DataFrame(returns_weights_eq,
                                        index=asset_names,)
 #+end_src
-#
+# 
 The implied equilibrium returns, Black-Litterman returns and their respective weights can be found in Table [[df_returns_weights_eq]].
-The difference represents the so called active risk
-The way the views affect the allocations is clear: 
+The difference represents the so called active risk and the way the views affect the allocations is clear: EQT has an absolute increase, JPM loses weight in favour of PH and the same occurs for ATO and KR.
 #+NAME: df_returns_weights_eq
 #+begin_src python  :results raw :exports results :tangle no
   tabulate(df_returns_weights_eq.round(decimals=5),
@@ -1004,7 +975,7 @@ The way the views affect the allocations is clear:
 | EQT  | 0.00721 |  0.0035 |        0.00371 |  0.12009 | 0.01941 |      0.10069 |
 | DXC  | 0.00835 | 0.00719 |        0.00116 |  0.00515 | 0.00515 |           -0 |
 |      |         |         |                |          |         |              |
-
+In the next section we will see how this shift affects the portfolio optmiz 
 *** Portfolio  optimisation
 #+NAME: Function to build portfolios weights
 #+begin_src python :results none 
@@ -1024,7 +995,7 @@ The way the views affect the allocations is clear:
       mu_targetlist : list
           Array of target returns
       x0 : np.array
-          initial optimization point
+          initial optimisation point
       mu_portfolio : np.array
           excess portfolio returns
       Sigma_portfolio : np.array
@@ -1038,7 +1009,7 @@ The way the views affect the allocations is clear:
       Returns
       -------
       list
-          List of objects with optimization results
+          List of objects with optimisation results
 
       """
 
@@ -1079,7 +1050,7 @@ The way the views affect the allocations is clear:
       mu_targetlist : list
           Array of target returns
       x0 : np.array
-          initial optimization point
+          initial optimisation point
       mu_portfolio : np.array
           excess portfolio returns
       Sigma_portfolio : np.array
@@ -1119,18 +1090,17 @@ The way the views affect the allocations is clear:
       Vols = [vi for vi in vols for i in range(len(assets))]
       Assets = [k for i in range(len(vols)) for k in assets]
       df_weights_vols = pd.DataFrame(dict(weights=Weights,
-                                          vols=Vols,
+                                          vol=Vols,
                                           assets=Assets
                                           ))
       return df_weights_vols
 #+end_src
 Three types of optimisation are explored, namely *mean-variance* without constraints, for which analytical solutions are available; *variance* optimisation with constraints of weights and *Sharpe ratio* also with constraints. The optimisation is carried out using a Sequential Least Squares Programming (SLSQP) algorithm as implemented in Scipy. This algorithm allows for both nonlinear objective and constraints functions.  
 **** Objective: Mean variance
-The first optimization performed is a mean-variance without constraints and since there is a close form solution, a comparison is made for verification of the optimization framework. Three types of risk aversion are considered with $\lambda_{portfolio} = [0.1, 2.24, 6]$ (w1, w2, w3 respectively). The results are presented in Table [[df_meanvariance_weights]], illustrating a very good comparison between theoretical and optimised weights after setting the appropriate tolerances to the optimiser. It is worth highlighting the views have shifted allocation from JPM to PH, over a sixfold increase in the KR weight and a shorting position of ATO in favour of KR.     
+
+The first optimisation performed is a mean-variance without constraints and since there is a close form solution, a comparison is made for verification of the optimisation framework. Three types of risk aversion are considered with $\lambda_{portfolio} = [0.1, 2.24, 6]$ (w1, w2, w3 respectively). The results are presented in Table [[df_meanvariance_weights]], illustrating a very good comparison between theoretical and optimised weights after setting the appropriate tolerances to the optimiser. It is worth highlighting the views have shifted allocation from JPM to PH, over a sixfold increase in the EQT weight and a shorting position of ATO in favour of KR.     
 #+NAME: Compute equilibrium returns 
 #+begin_src python :results none 
-  f_mu = lambda l, S, w: l * S @ w
-  f_w = lambda l, Sinv, mu: 1/ l * Sinv @ mu
   mu_mkt_assets = f_mu(config.lambda_mkt, Sigma_assets_train, w_mkt)
   w1_mkt_theoretical = optimization.mean_variance_opt(mu_mkt_assets, Sigmainv_assets_train, config.lambda_portfolio[0])
   w2_mkt_theoretical = optimization.mean_variance_opt(mu_mkt_assets, Sigmainv_assets_train, config.lambda_portfolio[1])
@@ -1142,7 +1112,8 @@ The first optimization performed is a mean-variance without constraints and sinc
 #+end_src
 
 #+NAME: Calculate mean variance optimization
-#+begin_src python :results none 
+#+begin_src python :results none
+  # Calculate mean variance optimization
   res_portfolios_bl = []
   res_portfolios_mkt = []
   for lmb_p in config.lambda_portfolio:
@@ -1167,7 +1138,7 @@ The first optimization performed is a mean-variance without constraints and sinc
                                         options=dict(maxiter=200,
                                                      ftol=1e-12))
       res_portfolios_mkt.append(res)
-    
+
   #res1 = res_portfolios_bl[2]  
 #+end_src
 
@@ -1193,7 +1164,7 @@ The first optimization performed is a mean-variance without constraints and sinc
            showindex=True, tablefmt='orgtbl')
 #+end_src
 #+NAME: df_meanvariance_weights
-#+CAPTION: Mean variance optimization weights
+#+CAPTION: Mean variance optimisation weights
 #+ATTR_LATEX: :width 1\textwidth :environment longtable :caption
 #+RESULTS: df_meanvariance_weights
 |               |     JPM |    CVS |   ATVI |     PH |   WELL |    YUM |     KR |     ATO |    EQT |    DXC |
@@ -1211,49 +1182,53 @@ The first optimization performed is a mean-variance without constraints and sinc
 | w3_{bl-opt}   |  0.1132 | 0.0435 | 0.0327 | 0.1146 | 0.0193 |  0.017 | 0.0574 | -0.0337 | 0.0448 | 0.0019 |
 | w3_{bl-theo}  |  0.1132 | 0.0435 | 0.0327 | 0.1146 | 0.0193 |  0.017 | 0.0574 | -0.0337 | 0.0448 | 0.0019 |
 
-For backtesting the performance of the computed portfolios, the cumulative returns are compared on the testing data against the Naive porfolio with constant weights of 0.1 across the 10 assets. Although both optimised portfolios perform better than the Naive one, the results in Fig. [[P&L_plot_meanvariance]] remark the importance of the addition on the views to keep a positive trend in the returns when there is perhaps a period of less growth.
+In order to test the performance of the computed portfolios, the cumulative returns are compared on the testing data against the Naive porfolio with constant weights of 0.1 across the 10 assets. The results in Fig. [[PL_plot_meanvariance]] remark the importance of the views to keep a positive trend in the returns when there is perhaps a period of less growth.
 #+begin_src python :results none 
-  weights_sol_mkt = {k: res_portfolios_mkt[1].x[i] for i, k in enumerate(asset_names)}
-  weights_sol_bl = {k: res_portfolios_bl[1].x[i] for i, k in enumerate(asset_names)}
-  #weights_sol = {k: w1_assets_opt[i] for i, k in enumerate(asset_names)}
-  df_profits_sol_mkt = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_mkt)
-  df_profits_sol_bl = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_bl)
-  weights_naive = {k: x0[i] for i, k in enumerate(asset_names)}
-  df_profits_naive = ml4qf.utils.profit_portfolio(df_assets_test, weights_naive)
-  weights_sp500 = {'GSPC': 1.}
-  df_profits_sp500 = ml4qf.utils.profit_portfolio(df_sp500_test, weights_sp500)
+    weights_sol_mkt = {k: res_portfolios_mkt[1].x[i] for i, k in enumerate(asset_names)}
+    weights_sol_bl = {k: res_portfolios_bl[1].x[i] for i, k in enumerate(asset_names)}
+    #weights_sol = {k: w1_assets_opt[i] for i, k in enumerate(asset_names)}
+    df_profits_sol_mkt = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_mkt)
+    df_profits_sol_bl = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_bl)
+    weights_naive = {k: x0[i] for i, k in enumerate(asset_names)}
+    df_profits_naive = ml4qf.utils.profit_portfolio(df_assets_test, weights_naive)
+    weights_sp500 = {'GSPC': 1.}
+    df_profits_sp500 = ml4qf.utils.profit_portfolio(df_sp500_test, weights_sp500)
 
-  df_rf = ml4qf.utils.profit_portfolio(df_factors_test[['RF']], {'RF':(sum(res1.x)-1)})
-  df_profits_meanvariance = pd.DataFrame(np.array([
-      np.hstack([1,df_profits_sol_bl.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
-      np.hstack([1,df_profits_sol_mkt.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
-      np.hstack([1,df_profits_naive.sum(axis=1).to_numpy()]),
-      np.hstack([1,df_profits_sp500.sum(axis=1).to_numpy()])
-  ]).T,
-                                     columns=['Opt-BL', 'Opt-mkt', 'Naive', 'SP500'],
-                                     index=df_profits_sol.index.insert(
-                                         0,df_assets_train.index[-1]))
+    df_rf_mkt = ml4qf.utils.profit_portfolio(df_factors_test[['RF']], {'RF':(sum(weights_sol_mkt.values())-1)})
+    df_rf_bl = ml4qf.utils.profit_portfolio(df_factors_test[['RF']], {'RF':(sum(weights_sol_bl.values())-1)})  
+    df_profits_meanvariance = pd.DataFrame(np.array([
+        np.hstack([1,df_profits_sol_bl.sum(axis=1).to_numpy()-df_rf_bl.to_numpy()[:,0]]),
+        np.hstack([1,df_profits_sol_mkt.sum(axis=1).to_numpy()-df_rf_mkt.to_numpy()[:,0]]),
+        np.hstack([1,df_profits_naive.sum(axis=1).to_numpy()]),
+        np.hstack([1,df_profits_sp500.sum(axis=1).to_numpy()])
+    ]).T,
+                                       columns=['Opt-BL', 'Opt-mkt', 'Naive', 'SP500'],
+                                       index=df_profits_sol_bl.index.insert(
+                                           0,df_assets_train.index[-1])
+                                           )
 
 #+end_src
 
-#+NAME: P&L_plot_meanvariance
+#+NAME: PL_plot_meanvariance
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
   fig1 = px.line(df_profits_meanvariance,
                  y=['Opt-BL', 'Opt-mkt', 'Naive', 'SP500'],
                  labels={'value':'Comulative returns'},
                  markers=True)
+  fig1.update_layout(margin_l=0,margin_b=3, margin_t=5)
   fig1.write_image(fig1_path)
-  fig1_path
+  fig1_path #
 #+end_src
-#+NAME: P&L_plot_meanvariance
-#+CAPTION: Cumulative returns for mean-variance optimization.
-#+ATTR_LATEX: :width 1\textwidth :environment longtable :caption
-#+RESULTS: P&L_plot_meanvariance
-[[file:img/P&L_plot_meanvariance.png]]
+#+NAME: PL_plot_meanvariance
+#+CAPTION: Cumulative returns for mean-variance optimisation.
+#+ATTR_LATEX: :width 0.75\textwidth :environment longtable :caption
+#+RESULTS: PL_plot_meanvariance
+[[file:img/PL_plot_meanvariance.png]]
 
 **** Objective: variance with constraints
-By setting the portfolio variance as the optimization objective and adding as constraints a target return (that is varied) and weights to be bigger than 0, one can construct a portfolio composition map for varying volatilities. This is shown in Figures [[Weights_Composition_mkt]] and [[Weights_Composition_bl]] for the expected equilibrium returns without and with views respectively.     
+
+By setting the portfolio variance as the optimisation objective and adding as constraints a target return (that is varied) and weights to be bigger than 0, one can construct a portfolio composition map for varying volatilities. This is shown in Figures [[Weights_Composition_mkt]] and [[Weights_Composition_bl]] for the expected equilibrium returns without and with views respectively. We can see the increase in allocation in EQT and KR, and more remarkably how PH overtakes JPM as the asset taking all the allocation when the  volatility increases.
 #+NAME: df for variance weights composition
 #+begin_src python :results none 
   # df for variance weights composition
@@ -1272,28 +1247,30 @@ By setting the portfolio variance as the optimization objective and adding as co
 #+NAME: Weights_Composition_mkt
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
-  fig1 = px.area(df_weightsvols_mkt, x="vols", y="weights", color="assets",
+  fig1 = px.area(df_weightsvols_mkt, x="vol", y="weights", color="assets",
                 #pattern_shape_sequence=[".", "x", "+"],              
                 pattern_shape="assets"
                 )
+  fig1.update_layout(margin_l=0,margin_b=3, margin_t=5)
   fig1.write_image(fig1_path)
-  fig1_path
+  fig1_path #
 #+end_src
 #+NAME: Weights_Composition_mkt
 #+CAPTION: Allocations weights for optimal portfolio with varying volatilities. 
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+RESULTS: Weights_Composition_mkt
-[[file:img/Weights_Composition_mkt.png]]
+[[file:]]
 
 #+NAME: Weights_Composition_bl
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
-  fig1 = px.area(df_weightsvols_bl, x="vols", y="weights", color="assets",
+  fig1 = px.area(df_weightsvols_bl, x="vol", y="weights", color="assets",
                 #pattern_shape_sequence=[".", "x", "+"],              
                 pattern_shape="assets"
                 )
+  fig1.update_layout(margin_l=0,margin_b=3, margin_t=5)
   fig1.write_image(fig1_path)
-  fig1_path
+  fig1_path #
 #+end_src
 #+NAME: Weights_Composition_bl
 #+CAPTION: Black-Litterman allocations weights for optimal portfolio with varying volatilities. 
@@ -1301,10 +1278,10 @@ By setting the portfolio variance as the optimization objective and adding as co
 #+RESULTS: Weights_Composition_bl
 [[file:img/Weights_Composition_bl.png]]
 
-Next the P&L of the variance optimisation is calculated for a target return of 10% annually which leads to a portfolio volatility of around 20%. As shown in Fig. [[P&L_plot_variance]], the portfolio with views consistently outperforms the Naive portfolio, not so the portfolio with implied market returns.  
+Next the P&L of the variance optimisation is calculated for a target return of 10% annually which leads to a portfolio volatility of around 20%. As shown in Fig. [[P&L_plot_variance]], the portfolio with views consistently outperforms the Naive portfolio, not so the portfolio with implied market returns. The weights of the portfolio can be found in Table [[df_varianceopt_weights]]. Note they comply well with the constraints, i.e sum up to 1 and are non negative.  
 #+NAME: Compute variance optimization
 #+begin_src python :results none 
-  # Compute variance optimization
+  # Compute variance optimisation
   x0 = 1. / num_assets * np.ones(num_assets)
   args = (bl_model_Sassets.mu_mkt,            
           bl_model_Sassets.Sigma,          
@@ -1356,17 +1333,19 @@ Next the P&L of the variance optimisation is calculated for a target return of 1
   weights_sp500 = {'GSPC': 1.}
   df_profits_sp500 = ml4qf.utils.profit_portfolio(df_sp500_test, weights_sp500)
 
-  df_rf = ml4qf.utils.profit_portfolio(df_factors_test[['RF']], {'RF':(sum(res1.x)-1)})
+  df_rf_mkt = ml4qf.utils.profit_portfolio(df_factors_test[['RF']], {'RF':(sum(weights_sol_mkt.values())-1)})
+  df_rf_bl = ml4qf.utils.profit_portfolio(df_factors_test[['RF']], {'RF':(sum(weights_sol_bl.values())-1)})  
   df_profits_variance = pd.DataFrame(np.array([
-      np.hstack([1,df_profits_sol_bl.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
-      np.hstack([1,df_profits_sol_mkt.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
+      np.hstack([1,df_profits_sol_bl.sum(axis=1).to_numpy()-df_rf_bl.to_numpy()[:,0]]),
+      np.hstack([1,df_profits_sol_mkt.sum(axis=1).to_numpy()-df_rf_mkt.to_numpy()[:,0]]),
       np.hstack([1,df_profits_naive.sum(axis=1).to_numpy()]),
       np.hstack([1,df_profits_sp500.sum(axis=1).to_numpy()])
   ]).T,
-                                     columns=['Opt-BL', 'Opt-mkt', 'Naive', 'SP500'],
-                                     index=df_profits_sol.index.insert(
-                                         0,df_assets_train.index[-1]))
-  
+                                         columns=['Opt-BL', 'Opt-mkt', 'Naive', 'SP500'],
+                                         index=df_profits_sol_bl.index.insert(
+                                             0,df_assets_train.index[-1])
+                                         )
+
 #+end_src
 
 #+NAME: P&L_plot_variance
@@ -1376,10 +1355,11 @@ Next the P&L of the variance optimisation is calculated for a target return of 1
                  y=['Opt-BL', 'Opt-mkt', 'Naive', 'SP500'],
                  labels={'value':'Comulative returns'},
                  markers=True)
+  fig1.update_layout(margin_l=0,margin_b=3, margin_t=5)
   fig1.write_image(fig1_path)
-  fig1_path
+  fig1_path #
 #+end_src
-#+CAPTION: Cumulative returns for variance optimization.   
+#+CAPTION: Cumulative returns for variance optimisation.   
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+NAME: P&L_plot_variance
 #+RESULTS: P&L_plot_variance
@@ -1397,16 +1377,18 @@ Next the P&L of the variance optimisation is calculated for a target return of 1
            showindex=True, tablefmt='orgtbl')
 #+end_src
 #+NAME: df_varianceopt_weights
-#+CAPTION: Resulting portfolio weights of variance optimization
+#+CAPTION: Resulting portfolio weights of variance optimisation
 #+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption
 #+RESULTS: df_varianceopt_weights
 |           |  JPM |  CVS | ATVI |   PH | WELL |  YUM |   KR |  ATO |  EQT |  DXC |
 |-----------+------+------+------+------+------+------+------+------+------+------|
 | w_naive   |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |
-| w_opt-BL  | 0.32 | 0.06 | 0.07 | 0.36 |   -0 |    0 | 0.08 |   -0 | 0.11 | 0.01 |
+| w_opt-BL  | 0.32 | 0.06 | 0.07 | 0.36 |   -0 |   -0 | 0.08 |    0 | 0.11 | 0.01 |
 | w_opt-mkt | 0.56 | 0.12 | 0.09 | 0.07 | 0.05 | 0.04 | 0.04 | 0.01 | 0.02 | 0.01 |
 
 **** Objective: Sharpe ratio
+
+The Sharpe ratio (portfolio excess returns over volatility) is the objective here with constraints on the weights to be equal to one and no short positions. Figure [[P&L_plot_sharpe]] shows the cumulative returns of the portfolio with weights in Table [[df_sharpeopt_weights]]. Even though the weights are not similar, the performance is very much like the variance portfolio.   
 #+NAME: Compute sharpe optimization
 #+begin_src python :results none 
 
@@ -1455,8 +1437,8 @@ Next the P&L of the variance optimisation is calculated for a target return of 1
 #+end_src
 
 #+begin_src python :results none 
-  weights_sol_mkt = {k: res_mkt.x[i] for i, k in enumerate(asset_names)}
-  weights_sol_bl = {k: res_bl.x[i] for i, k in enumerate(asset_names)}
+  weights_sol_mkt = {k: resp_mkt.x[i] for i, k in enumerate(asset_names)}
+  weights_sol_bl = {k: resp_bl.x[i] for i, k in enumerate(asset_names)}
   #weights_sol = {k: w1_assets_opt[i] for i, k in enumerate(asset_names)}
   df_profits_sol_mkt = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_mkt)
   df_profits_sol_bl = ml4qf.utils.profit_portfolio(df_assets_test, weights_sol_bl)
@@ -1465,19 +1447,21 @@ Next the P&L of the variance optimisation is calculated for a target return of 1
   weights_sp500 = {'GSPC': 1.}
   df_profits_sp500 = ml4qf.utils.profit_portfolio(df_sp500_test, weights_sp500)
 
-  df_rf = ml4qf.utils.profit_portfolio(df_factors_test[['RF']], {'RF':(sum(res1.x)-1)})
+  df_rf_mkt = ml4qf.utils.profit_portfolio(df_factors_test[['RF']], {'RF':(sum(weights_sol_mkt.values())-1)})
+  df_rf_bl = ml4qf.utils.profit_portfolio(df_factors_test[['RF']], {'RF':(sum(weights_sol_bl.values())-1)})  
   df_profits_sharpe = pd.DataFrame(np.array([
-      np.hstack([1,df_profits_sol_bl.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
-      np.hstack([1,df_profits_sol_mkt.sum(axis=1).to_numpy()-df_rf.to_numpy()[:,0]]),
+      np.hstack([1,df_profits_sol_bl.sum(axis=1).to_numpy()-df_rf_bl.to_numpy()[:,0]]),
+      np.hstack([1,df_profits_sol_mkt.sum(axis=1).to_numpy()-df_rf_mkt.to_numpy()[:,0]]),
       np.hstack([1,df_profits_naive.sum(axis=1).to_numpy()]),
       np.hstack([1,df_profits_sp500.sum(axis=1).to_numpy()])
   ]).T,
-                                     columns=['Opt-BL', 'Opt-mkt', 'Naive', 'SP500'],
-                                     index=df_profits_sol.index.insert(
-                                         0,df_assets_train.index[-1]))
-  
-#+end_src
+                                         columns=['Opt-BL', 'Opt-mkt', 'Naive', 'SP500'],
+                                         index=df_profits_sol_bl.index.insert(
+                                             0,df_assets_train.index[-1])
+                                         )
 
+#+end_src
+\newpage
 #+NAME: P&L_plot_sharpe
 #+begin_src python :results value file  :exports results :var name=(org-element-property :name  (org-element-context)) 
   fig1_path= img_dir / f'{name}.png'
@@ -1485,10 +1469,11 @@ Next the P&L of the variance optimisation is calculated for a target return of 1
                  y=['Opt-BL', 'Opt-mkt', 'Naive', 'SP500'],
                  labels={'value':'Comulative returns'},
                  markers=True)
+  fig1.update_layout(margin_l=0,margin_b=3, margin_t=5)
   fig1.write_image(fig1_path)
-  fig1_path
+  fig1_path #
 #+end_src
-#+CAPTION: Cumulative returns for Sharpe optimization.   
+#+CAPTION: Cumulative returns for Sharpe optimisation.   
 #+ATTR_LATEX: :width 0.75\textwidth 
 #+NAME: P&L_plot_sharpe
 #+RESULTS: P&L_plot_sharpe
@@ -1506,22 +1491,20 @@ Next the P&L of the variance optimisation is calculated for a target return of 1
            showindex=True, tablefmt='orgtbl')
 #+end_src
 #+NAME: df_sharpeopt_weights
-#+CAPTION: Resulting portfolio weights of Sharpe optimization
+#+CAPTION: Resulting portfolio weights of Sharpe optimisation
 #+ATTR_LATEX: :width 0.7\textwidth :environment longtable :caption
 #+RESULTS: df_sharpeopt_weights
 |           |  JPM |  CVS | ATVI |   PH | WELL |  YUM |   KR |  ATO |  EQT |  DXC |
 |-----------+------+------+------+------+------+------+------+------+------+------|
 | w_naive   |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |  0.1 |
-| w_opt-BL  | 0.26 |  0.1 | 0.07 | 0.26 | 0.03 | 0.04 | 0.13 |    0 |  0.1 | 0.01 |
-| w_opt-mkt | 0.54 | 0.12 | 0.09 | 0.07 | 0.05 | 0.05 | 0.04 | 0.02 | 0.02 | 0.01 |
-
-
-
+| w_opt-BL  | 0.26 |  0.1 | 0.07 | 0.26 | 0.03 | 0.04 | 0.13 |   -0 |  0.1 | 0.01 |
+| w_opt-mkt | 0.55 | 0.12 | 0.09 | 0.07 | 0.05 | 0.05 | 0.04 | 0.02 | 0.02 | 0.01 |
 
 * Conclusions and further work
 A Black-Litterman portfolio optimisation with factors has been implemented. Views were generated using a statistical ARIMA process to forecast over 2 years onto the future using 20 years of past data. Mean-variance, variance and Sharpe ratio optimisations with constraints were carried out and the resulting optimised portfolio with views is shown to outperform both the S&P500 index and a naive selection of 1/N assets.
 
 As for future work three main areas are identified where important improvements can be made: 1) the factors prediction would be much stronger with a Machine Learning model such as an LSTM; and better predictions mean more relevant views 2) A covariance treatment with denoising would make the results from the optimisation more robust. 3) using a more advance optimisation strategy such as De Prado's Hierarchical Risk Parity.
+\newpage
 #+LaTeX: \appendix
 * Code installation, execution, and structure
 <<sec:appx_code>>
