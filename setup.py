@@ -21,6 +21,9 @@ setup(
     #     ],
     python_requires=">=3.10",
     install_requires=[
+        "python-lsp-server",
+        "python-lsp-ruff",
+        "equinox",
         "MiniSom",
         "QuantStats",
         "beautifulsoup4",
