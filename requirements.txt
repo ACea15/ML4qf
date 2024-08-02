@@ -18,5 +18,8 @@ yfinance
 keras-tuner
 tensorboard
 pandas_ta
-python-lsp-server[all]
+python-lsp-server
+python-lsp-ruff
 scikeras
+jax
+jaxlib
