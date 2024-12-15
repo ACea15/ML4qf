@@ -1,4 +1,87 @@
 [build-system]
-requires = [
-    "setuptools"
-    ]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = ["ml4qf/*"]
+
+[project]
+name = "ML4qf"
+version = "0.0.0"
+description = "Prototyping Machine Learning models for market analysis"
+authors = [{ name = "Alvaro Cea", email = "alvar_cea@outlook.com" }]
+readme = "README.md"
+requires-python = ">=3.10"
+#license = { file = "LICENSE" }
+keywords = [
+]
+classifiers = [
+]
+
+urls = {repository = "https://github.com/ACea15/ML4qf" }
+dependencies = [
+	     "cufflinks",
+             "graphviz",  
+             "h5py",
+             "MiniSom",
+             "missingno",
+             "networkx",
+             "plotly",
+             "pydot",
+             "pyfolio-reloaded",
+             "QuantStats",
+             "seaborn",
+	     "mplfinance",
+             "tabulate",
+             "tensorboard",
+             "shap",
+             "xgboost",
+             "xlrd",
+             "yfinance",
+             "keras-tuner",
+             "tensorboard",
+             "pandas_ta",
+             "python-lsp-server",
+             "python-lsp-ruff",
+             "scikeras",
+             "jax",
+             "jaxlib"
+	]
+
+[project.optional-dependencies]
+# dev = []
+# postprocessing = []
+# all = []
+
+[tool.ruff]
+line-length = 100
+src = ["feniax", "tests"]
+
+[tool.ruff.lint]
+# fixable = ["I001", "F401"]
+#ignore = ["E402", "E721", "E731", "E741", "F722"]
+ignore-init-module-imports = true
+select = ["E", "F", "I", "D"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+lines-after-imports = 2
+order-by-type = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"  # Accepts: "google", "numpy", or "pep257".
+
+[tool.ruff.format]
+#quote-style = "single"
+#indent-style = "space"
+docstring-code-format = true
+
+[tool.pylsp-mypy]
+enabled = true
+live_mode = true
+strict = true
+include = ["feniax"]
+exclude = ["tests/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
